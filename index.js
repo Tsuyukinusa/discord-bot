@@ -133,6 +133,9 @@ client.on("interactionCreate", async (interaction) => {
     fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
     await interaction.reply(`✏️ お迎えメッセージを変更しました！\n現在の設定：\n> ${message}`);
   }
-});
-client.login(process.env.TOKEN);
+  
+  client.on("messageCreate", (message) => { ... });
+client.on("interactionCreate", async (interaction) => { ... });
+// 🟩 ここまで
+
 
