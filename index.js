@@ -461,7 +461,7 @@ client.on("messageCreate", async (message) => {
 
   // 「ぬさ」に反応（部分一致でも可。完全一致にしたければ ===）
   if (message.content === "ぬさ") {
-    message.channel.send("ぬさ！✨").catch(() => {});
+    message.channel.send("ぬさw").catch(() => {});
   }
 
   const guildId = message.guild.id;
