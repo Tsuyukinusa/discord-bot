@@ -1,17 +1,23 @@
-const { Client, GatewayIntentBits } = require('discord.js');
-require('dotenv').config();
+require("dotenv").config(); // ← これを一番上に！
+const TOKEN = process.env.TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
+
+const { Client, GatewayIntentBits } = require("discord.js");
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildVoiceStates // ← VXPを測定するために追加！
   ]
 });
 
-client.once('ready', () => {
+client.once("ready", () => {
   console.log(`✅ ログイン完了: ${client.user.tag}`);
 });
+
+client.login(TOKEN); // ← GitHub SecretsのTOKENを使ってログイン
 
 client.on('messageCreate', message => {
   if (message.content === 'ぬさ') {
