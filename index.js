@@ -1,11 +1,3 @@
-
-
-client.on('messageCreate', message => {
-  if (message.content === 'ぬさ') {
-    message.channel.send('ぬさ！✨');
-  }
-});
-
 //==============================
 // 🎯 Discord多機能Bot 完全版
 //==============================
@@ -42,7 +34,11 @@ const client = new Client({
 client.once("ready", () => {
   console.log(`✅ ログイン完了: ${client.user.tag}`);
 });
-
+client.on('messageCreate', message => {
+  if (message.content === 'ぬさ') {
+    message.channel.send('ぬさ！✨');
+  }
+});
 //==============================
 // 💾 データ保存設定
 //==============================
