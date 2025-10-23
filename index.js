@@ -34,7 +34,7 @@ client.once("ready", () => {
 });
 
 client.on("messageCreate", msg => {
-  if (msg.content === "ぬさ") msg.channel.send("ぬさ！✨");
+  if (msg.content === "ぬさ") msg.channel.send("ぬさw");
 });
 
 //==============================
