@@ -25,7 +25,6 @@ client.on('messageCreate', message => {
   }
 });
 
-client.login(process.env.TOKEN);
 const { REST, Routes, SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
