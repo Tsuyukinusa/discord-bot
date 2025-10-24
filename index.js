@@ -286,6 +286,243 @@ client.on("interactionCreate", async i => {
     return i.reply("📩 お迎えメッセージの送信チャンネルを設定しました。");
   }
 });
+//==============================
+// 💰 経済システム
+//==============================
+
+if (!data.economy) data.economy = {};
+saveData();
+
+function initUser(gid, uid) {
+  if (!data.economy[gid]) data.economy[gid] = {};
+  if (!data.economy[gid][uid])
+    data.economy[gid][uid] = {
+      wallet: data.initialMoney || 1000, // 初期所持金
+      bank: 0,
+      items: {},
+      stocks: {}
+    };
+  saveData();
+}
+
+function getUser(gid, uid) {
+  initUser(gid, uid);
+  return data.economy[gid][uid];
+}
+
+function formatCurrency(amount, gid) {
+  const currency = data.currencySymbol?.[gid] || "💰";
+  const name = data.currencyName?.[gid] || "コイン";
+  return `${currency}${amount} ${name}`;
+}
+
+//==============================
+// 🪙 経済系スラッシュコマンド登録
+//==============================
+const economyCommands = [
+  // 👤 残高確認
+  new SlashCommandBuilder()
+    .setName("balance")
+    .setDescription("自分の所持金と銀行残高を確認します。"),
+
+  // 🏦 銀行入出金
+  new SlashCommandBuilder()
+    .setName("deposit")
+    .setDescription("銀行にお金を預けます。")
+    .addIntegerOption(o => o.setName("amount").setDescription("金額").setRequired(true)),
+
+  new SlashCommandBuilder()
+    .setName("withdraw")
+    .setDescription("銀行からお金を引き出します。")
+    .addIntegerOption(o => o.setName("amount").setDescription("金額").setRequired(true)),
+
+  // 💸 送金
+  new SlashCommandBuilder()
+    .setName("pay")
+    .setDescription("他のユーザーにお金を送金します。")
+    .addUserOption(o => o.setName("target").setDescription("送り先ユーザー").setRequired(true))
+    .addIntegerOption(o => o.setName("amount").setDescription("送金額").setRequired(true)),
+
+  // 💼 仕事
+  new SlashCommandBuilder()
+    .setName("work")
+    .setDescription("働いてお金を稼ぎます。（クールタイムあり）"),
+
+  // 💣 犯罪
+  new SlashCommandBuilder()
+    .setName("crime")
+    .setDescription("犯罪でお金を稼ごうとします（罰金の可能性あり）"),
+
+  // 🏆 所持金ランキング
+  new SlashCommandBuilder()
+    .setName("balancetop")
+    .setDescription("所持金ランキングを表示します。"),
+
+  // 🏛️ 管理者専用：通貨設定・付与・減額など
+  new SlashCommandBuilder()
+    .setName("setcurrency")
+    .setDescription("通貨名と絵文字を設定します。")
+    .addStringOption(o => o.setName("name").setDescription("通貨の名前").setRequired(true))
+    .addStringOption(o => o.setName("emoji").setDescription("通貨の絵文字").setRequired(true))
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
+    .setName("addmoney")
+    .setDescription("ユーザーにお金を付与します。")
+    .addUserOption(o => o.setName("user").setDescription("対象ユーザー").setRequired(true))
+    .addIntegerOption(o => o.setName("amount").setDescription("金額").setRequired(true))
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
+    .setName("removemoney")
+    .setDescription("ユーザーからお金を減らします。")
+    .addUserOption(o => o.setName("user").setDescription("対象ユーザー").setRequired(true))
+    .addIntegerOption(o => o.setName("amount").setDescription("金額").setRequired(true))
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+].map(c => c.toJSON());
+
+// 経済コマンドも登録
+(async () => {
+  try {
+    await rest.put(Routes.applicationCommands(CLIENT_ID), { body: [...commands, ...economyCommands] });
+    console.log("✅ 経済コマンド登録完了！");
+  } catch (err) {
+    console.error(err);
+  }
+})();
+
+//==============================
+// 💰 経済コマンド実行
+//==============================
+const workCooldown = new Map();
+const crimeCooldown = new Map();
+
+client.on("interactionCreate", async i => {
+  if (!i.isChatInputCommand()) return;
+  const gid = i.guild.id;
+  const uid = i.user.id;
+  initUser(gid, uid);
+  const userData = getUser(gid, uid);
+
+  // 👤 balance
+  if (i.commandName === "balance") {
+    return i.reply(
+      `💼 **${i.user.username}の残高**\n所持金: ${formatCurrency(userData.wallet, gid)}\n銀行: ${formatCurrency(userData.bank, gid)}`
+    );
+  }
+
+  // 🏦 deposit
+  if (i.commandName === "deposit") {
+    const amount = i.options.getInteger("amount");
+    if (userData.wallet < amount) return i.reply("💸 所持金が足りません。");
+    userData.wallet -= amount;
+    userData.bank += amount;
+    saveData();
+    return i.reply(`🏦 銀行に ${formatCurrency(amount, gid)} 預けました。`);
+  }
+
+  // 💰 withdraw
+  if (i.commandName === "withdraw") {
+    const amount = i.options.getInteger("amount");
+    if (userData.bank < amount) return i.reply("🏦 銀行残高が足りません。");
+    userData.bank -= amount;
+    userData.wallet += amount;
+    saveData();
+    return i.reply(`💸 銀行から ${formatCurrency(amount, gid)} 引き出しました。`);
+  }
+
+  // 💸 pay
+  if (i.commandName === "pay") {
+    const target = i.options.getUser("target");
+    const amount = i.options.getInteger("amount");
+    if (target.id === uid) return i.reply("🙃 自分には送金できません。");
+    if (userData.wallet < amount) return i.reply("💰 所持金が足りません。");
+    initUser(gid, target.id);
+    const targetData = getUser(gid, target.id);
+    userData.wallet -= amount;
+    targetData.wallet += amount;
+    saveData();
+    return i.reply(`💸 ${target.username} に ${formatCurrency(amount, gid)} 送金しました！`);
+  }
+
+  // 💼 work
+  if (i.commandName === "work") {
+    const cooldown = workCooldown.get(uid);
+    if (cooldown && Date.now() - cooldown < 1000 * 60 * 5)
+      return i.reply("⏳ 仕事は5分に1回しかできません。");
+    const earn = Math.floor(Math.random() * 200) + 100;
+    userData.wallet += earn;
+    saveData();
+    workCooldown.set(uid, Date.now());
+    return i.reply(`💼 一生懸命働いて ${formatCurrency(earn, gid)} を稼ぎました！`);
+  }
+
+  // 💣 crime
+  if (i.commandName === "crime") {
+    const cooldown = crimeCooldown.get(uid);
+    if (cooldown && Date.now() - cooldown < 1000 * 60 * 10)
+      return i.reply("⏳ 犯罪は10分に1回しかできません。");
+    const chance = Math.random();
+    if (chance < 0.3) {
+      const fine = Math.floor(Math.random() * 300) + 100;
+      userData.wallet = Math.max(0, userData.wallet - fine);
+      saveData();
+      crimeCooldown.set(uid, Date.now());
+      return i.reply(`🚨 捕まって罰金 ${formatCurrency(fine, gid)} を払いました！`);
+    } else {
+      const earn = Math.floor(Math.random() * 500) + 200;
+      userData.wallet += earn;
+      saveData();
+      crimeCooldown.set(uid, Date.now());
+      return i.reply(`😈 犯罪に成功して ${formatCurrency(earn, gid)} を稼ぎました！`);
+    }
+  }
+
+  // 🏆 balancetop
+  if (i.commandName === "balancetop") {
+    const users = Object.entries(data.economy[gid] || {}).sort(
+      (a, b) => b[1].wallet + b[1].bank - (a[1].wallet + a[1].bank)
+    );
+    const top = users.slice(0, 10);
+    return i.reply(
+      `🏆 **残高ランキング**\n${top
+        .map(([id, v], idx) => `**${idx + 1}.** <@${id}> — ${formatCurrency(v.wallet + v.bank, gid)}`)
+        .join("\n")}`
+    );
+  }
+
+  // 🏛️ 管理者
+  if (i.commandName === "setcurrency") {
+    const name = i.options.getString("name");
+    const emoji = i.options.getString("emoji");
+    if (!data.currencyName) data.currencyName = {};
+    if (!data.currencySymbol) data.currencySymbol = {};
+    data.currencyName[gid] = name;
+    data.currencySymbol[gid] = emoji;
+    saveData();
+    return i.reply(`💱 通貨を ${emoji}${name} に設定しました。`);
+  }
+
+  if (i.commandName === "addmoney") {
+    const user = i.options.getUser("user");
+    const amount = i.options.getInteger("amount");
+    initUser(gid, user.id);
+    const targetData = getUser(gid, user.id);
+    targetData.wallet += amount;
+    saveData();
+    return i.reply(`💰 ${user.username} に ${formatCurrency(amount, gid)} 付与しました。`);
+  }
+
+  if (i.commandName === "removemoney") {
+    const user = i.options.getUser("user");
+    const amount = i.options.getInteger("amount");
+    initUser(gid, user.id);
+    const targetData = getUser(gid, user.id);
+    targetData.wallet = Math.max(0, targetData.wallet - amount);
+    saveData();
+    return i.reply(`💸 ${user.username} から ${formatCurrency(amount, gid)} 減額しました。`);
+  }
+});
 
 //==============================
 // 🔑 ログイン
