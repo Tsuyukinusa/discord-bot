@@ -955,6 +955,35 @@ function restartStockFluctuation() {
 client.once("ready", () => {
   restartStockFluctuation();
 });
+//==============================
+// 📊 株価変動率設定コマンド追加
+//==============================
+commands.push(
+  new SlashCommandBuilder()
+    .setName("setfluctuationrate")
+    .setDescription("株価変動率（±％）を設定します。")
+    .addNumberOption(o =>
+      o.setName("rate").setDescription("変動率（例: 5 → ±5%）").setRequired(true)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+);
+
+// コマンド処理追加
+client.on("interactionCreate", async i => {
+  if (!i.isChatInputCommand()) return;
+
+  if (i.commandName === "setfluctuationrate") {
+    const rate = i.options.getNumber("rate");
+
+    if (rate <= 0 || rate > 100) {
+      return i.reply("⚠️ 変動率は 1〜100 の範囲で入力してください。");
+    }
+
+    data.stockFluctuationRate = rate;
+    saveData();
+    return i.reply(`📈 株価変動率を ±${rate}% に設定しました！`);
+  }
+});
 
 //==============================
 // 🔑 ログイン
