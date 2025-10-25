@@ -390,7 +390,10 @@ client.on("interactionCreate", async i => {
     saveData();
     return i.reply(`💸 銀行から ${formatCurrency(amount, gid)} 引き出しました。`);
   }
-
+// 💵 refund（ここから追加）
+if (i.commandName === "refund") {
+  // ここに返金処理のソースコードを貼る
+}
   // 💸 pay
   if (i.commandName === "pay") {
     const target = i.options.getUser("target");
