@@ -639,6 +639,128 @@ client.on("interactionCreate", async i => {
     return i.reply(`🏦 利息の付与期間を **${days}日** に設定しました。`);
   }
 });
+//==============================
+// 💹 株式管理・一覧・編集システム
+//==============================
+
+if (!data.stocks) data.stocks = {};
+if (!data.stockIntervalHours) data.stockIntervalHours = 1;
+if (!data.stockFluctuationRate) data.stockFluctuationRate = 5.0;
+
+function saveData() {
+  fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
+}
+
+//==============================
+// ⚙️ コマンド登録追加
+//==============================
+commands.push(
+  new SlashCommandBuilder()
+    .setName("addstock")
+    .setDescription("新しい会社（株）を追加します。")
+    .addStringOption(o => o.setName("name").setDescription("会社名").setRequired(true))
+    .addIntegerOption(o => o.setName("price").setDescription("初期株価").setRequired(true))
+    .addNumberOption(o => o.setName("dividend").setDescription("配当率（例：0.05）").setRequired(true))
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
+    .setName("removestock")
+    .setDescription("会社（株）を削除します。")
+    .addStringOption(o => o.setName("name").setDescription("会社名").setRequired(true))
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
+    .setName("editstock")
+    .setDescription("会社（株）の情報を変更します。")
+    .addStringOption(o => o.setName("name").setDescription("会社名").setRequired(true))
+    .addIntegerOption(o => o.setName("price").setDescription("新しい株価").setRequired(false))
+    .addNumberOption(o => o.setName("dividend").setDescription("新しい配当率（例：0.05）").setRequired(false))
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
+    .setName("stocks")
+    .setDescription("登録されている株会社一覧を表示します。")
+);
+
+//==============================
+// ⚙️ コマンド処理
+//==============================
+client.on("interactionCreate", async i => {
+  if (!i.isChatInputCommand()) return;
+  const gid = i.guild?.id;
+  if (!gid) return;
+
+  // 📈 株会社追加
+  if (i.commandName === "addstock") {
+    const name = i.options.getString("name");
+    const price = i.options.getInteger("price");
+    const dividend = i.options.getNumber("dividend");
+
+    if (data.stocks[name]) return i.reply("❌ その会社はすでに存在します。");
+    if (price <= 0 || dividend < 0) return i.reply("❌ 無効な値です。");
+
+    data.stocks[name] = { price, dividend };
+    saveData();
+    return i.reply(`🏢 株会社 **${name}** を追加しました！\n📊 初期株価: ${price}\n💰 配当率: ${(dividend * 100).toFixed(2)}%`);
+  }
+
+  // ❌ 株会社削除
+  if (i.commandName === "removestock") {
+    const name = i.options.getString("name");
+    if (!data.stocks[name]) return i.reply("❌ その会社は存在しません。");
+    delete data.stocks[name];
+    saveData();
+    return i.reply(`🗑️ 株会社 **${name}** を削除しました。`);
+  }
+
+  // ✏️ 株会社編集
+  if (i.commandName === "editstock") {
+    const name = i.options.getString("name");
+    const price = i.options.getInteger("price");
+    const dividend = i.options.getNumber("dividend");
+    const stock = data.stocks[name];
+    if (!stock) return i.reply("❌ その会社は存在しません。");
+
+    if (price && price > 0) stock.price = price;
+    if (dividend && dividend >= 0) stock.dividend = dividend;
+    saveData();
+    return i.reply(`✏️ 株会社 **${name}** の情報を更新しました。\n📈 株価: ${stock.price}\n💰 配当率: ${(stock.dividend * 100).toFixed(2)}%`);
+  }
+
+  // 📃 株会社一覧
+  if (i.commandName === "stocks") {
+    if (Object.keys(data.stocks).length === 0)
+      return i.reply("📭 登録されている会社はありません。");
+
+    const list = Object.entries(data.stocks)
+      .map(([name, s]) => `🏢 **${name}** | 株価: ${s.price} | 配当率: ${(s.dividend * 100).toFixed(2)}%`)
+      .join("\n");
+
+    return i.reply(`💹 現在の登録会社一覧:\n${list}`);
+  }
+});
+
+//==============================
+// 💹 株価の自動変動
+//==============================
+let stockIntervalTask = null;
+
+function restartStockInterval() {
+  if (stockIntervalTask) clearInterval(stockIntervalTask);
+  const intervalMs = data.stockIntervalHours * 60 * 60 * 1000;
+
+  stockIntervalTask = setInterval(() => {
+    for (const [name, stock] of Object.entries(data.stocks)) {
+      const range = data.stockFluctuationRate;
+      const rate = (Math.random() * range * 2 - range) / 100; // ±range%
+      stock.price = Math.max(10, Math.floor(stock.price * (1 + rate)));
+    }
+    saveData();
+    console.log(`📈 株価変動実行（${data.stockIntervalHours}時間間隔 ±${data.stockFluctuationRate}%）`);
+  }, intervalMs);
+}
+
+restartStockInterval();
 
 //==============================
 // 🔑 ログイン
