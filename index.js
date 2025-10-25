@@ -1280,6 +1280,123 @@ async def update_stock_price():
 
             # 通知送信
             channel = discord.
+# ====== 株価通知チャンネルの設定 ======
+stock_channel_id = None  # 通知先チャンネルIDを保持
+
+@bot.tree.command(name="setstockchannel", description="株価通知を送るチャンネルを設定します（管理者専用）")
+@app_commands.describe(channel="通知を送信するチャンネルを指定")
+@commands.has_permissions(administrator=True)
+async def setstockchannel(interaction: discord.Interaction, channel: discord.TextChannel):
+    global stock_channel_id
+    stock_channel_id = channel.id
+    await interaction.response.send_message(f"✅ 株価通知チャンネルを {channel.mention} に設定しました！")
+
+# ====== 複数会社対応：株データ ======
+stocks = {}  # {会社名: {"price": int, "dividend": float, "rate": float, "history": [(datetime, price)]}}
+
+# ====== 株を登録するコマンド ======
+@bot.tree.command(name="addstock", description="新しい株会社を登録します（管理者専用）")
+@app_commands.describe(
+    name="会社名",
+    price="初期株価",
+    dividend="配当率（%）",
+    rate="株価変動率（±%）"
+)
+@commands.has_permissions(administrator=True)
+async def addstock(interaction: discord.Interaction, name: str, price: int, dividend: float, rate: float):
+    if name in stocks:
+        await interaction.response.send_message("⚠️ すでに登録されている会社です。")
+        return
+
+    stocks[name] = {
+        "price": price,
+        "dividend": dividend,
+        "rate": rate,
+        "history": [(datetime.now(), price)]
+    }
+    await interaction.response.send_message(
+        f"🏢 株会社 **{name}** を登録しました！\n"
+        f"初期株価: {price}円\n配当率: {dividend}%\n変動率: ±{rate}%"
+    )
+
+# ====== 株一覧を表示するコマンド ======
+@bot.tree.command(name="stocklist", description="登録されている株会社の一覧を表示します")
+async def stocklist(interaction: discord.Interaction):
+    if not stocks:
+        await interaction.response.send_message("📉 現在登録されている会社はありません。")
+        return
+
+    embed = discord.Embed(title="📊 登録株会社一覧", color=discord.Color.blue())
+    for name, info in stocks.items():
+        embed.add_field(
+            name=name,
+            value=(
+                f"株価: {info['price']}円\n"
+                f"配当率: {info['dividend']}%\n"
+                f"変動率: ±{info['rate']}%"
+            ),
+            inline=False
+        )
+    await interaction.response.send_message(embed=embed)
+
+# ====== 株価の自動変動（全会社対応） ======
+async def auto_stock_update():
+    global stock_channel_id
+    while True:
+        now = datetime.now()
+        next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+        wait_time = (next_hour - now).total_seconds()
+        await asyncio.sleep(wait_time)
+
+        for name, data in stocks.items():
+            old_price = data["price"]
+            rate = random.uniform(-data["rate"], data["rate"])
+            new_price = round(old_price * (1 + rate / 100))
+            data["price"] = new_price
+            data["history"].append((datetime.now(), new_price))
+            if len(data["history"]) > 50:
+                data["history"].pop(0)
+
+            # 配当Aの計算
+            dividend_total = round(new_price * data["dividend"] / 100)
+
+            # グラフ生成
+            times = [t.strftime("%H:%M") for t, _ in data["history"]]
+            prices = [p for _, p in data["history"]]
+            plt.figure(figsize=(6, 3))
+            plt.plot(times, prices, marker="o", linestyle="-", label="株価推移")
+            plt.title(f"{name} 株価推移")
+            plt.xlabel("時間")
+            plt.ylabel("株価")
+            plt.grid(True)
+            plt.legend()
+            buf = io.BytesIO()
+            plt.savefig(buf, format="png")
+            buf.seek(0)
+            plt.close()
+
+            # 通知送信
+            if stock_channel_id:
+                channel = bot.get_channel(stock_channel_id)
+                if channel:
+                    embed = discord.Embed(
+                        title=f"📈 株価変動通知 - {name}",
+                        description=(
+                            f"**新株価:** {new_price}円（{rate:+.2f}%）\n"
+                            f"**配当:** A（合計配当 {dividend_total}円）"
+                        ),
+                        color=discord.Color.green() if rate >= 0 else discord.Color.red(),
+                        timestamp=datetime.now()
+                    )
+                    file = discord.File(buf, filename=f"{name}_chart.png")
+                    embed.set_image(url=f"attachment://{name}_chart.png")
+                    await channel.send(embed=embed, file=file)
+
+# ====== 起動時に自動タスク開始 ======
+@bot.event
+async def on_ready():
+    print(f"✅ Bot起動完了: {bot.user}")
+    bot.loop.create_task(auto_stock_update())
 
 //==============================
 // 🔑 ログイン
