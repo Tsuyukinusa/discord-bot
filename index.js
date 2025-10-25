@@ -761,6 +761,200 @@ function restartStockInterval() {
 }
 
 restartStockInterval();
+//==============================
+// 💹 株価自動変動＋通知システム（n時間ごと）
+//==============================
+
+// n時間ごとの変動設定
+if (!data.stockIntervalHours) data.stockIntervalHours = 3; // デフォルト3時間ごと
+if (!data.stockFluctuationRate) data.stockFluctuationRate = 5.0; // ±5%
+if (!data.stockNotifyChannel) data.stockNotifyChannel = null; // 通知チャンネルID
+
+// 💬 通知チャンネルを設定するスラッシュコマンド
+commands.push(
+  new SlashCommandBuilder()
+    .setName("setstockchannel")
+    .setDescription("株価変動通知を送信するチャンネルを設定します。")
+    .addChannelOption(o =>
+      o.setName("channel").setDescription("通知チャンネル").setRequired(true)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
+    .setName("setstockinterval")
+    .setDescription("株価が自動で変動する間隔（時間）を設定します。")
+    .addNumberOption(o =>
+      o.setName("hours").setDescription("間隔（時間単位）").setRequired(true)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+);
+
+// スラッシュコマンド処理追加
+client.on("interactionCreate", async i => {
+  if (!i.isChatInputCommand()) return;
+
+  // 📢 通知チャンネル設定
+  if (i.commandName === "setstockchannel") {
+    const ch = i.options.getChannel("channel");
+    data.stockNotifyChannel = ch.id;
+    saveData();
+    return i.reply(`📢 株価通知チャンネルを ${ch} に設定しました。`);
+  }
+
+  // ⏰ 更新間隔設定
+  if (i.commandName === "setstockinterval") {
+    const hours = i.options.getNumber("hours");
+    if (hours < 0.5) return i.reply("⏳ 最小でも0.5時間（30分）以上にしてください。");
+
+    data.stockIntervalHours = hours;
+    saveData();
+    restartStockFluctuation(); // 再起動
+    return i.reply(`⏰ 株価の自動更新間隔を **${hours}時間ごと** に設定しました。`);
+  }
+});
+
+// 💹 株価変動ロジック
+let stockFluctuationTimer = null;
+
+function restartStockFluctuation() {
+  if (stockFluctuationTimer) clearInterval(stockFluctuationTimer);
+
+  const intervalMs = data.stockIntervalHours * 60 * 60 * 1000;
+
+  stockFluctuationTimer = setInterval(() => {
+    if (!data.stocks || Object.keys(data.stocks).length === 0) return;
+
+    let notifyMsg = "💹 **株価更新情報** 💹\n";
+
+    for (const [name, stock] of Object.entries(data.stocks)) {
+      const oldPrice = stock.price;
+      const range = data.stockFluctuationRate;
+      const rate = (Math.random() * range * 2 - range) / 100; // ±range%
+      const newPrice = Math.max(10, Math.floor(oldPrice * (1 + rate)));
+      const diffRate = ((newPrice - oldPrice) / oldPrice) * 100;
+
+      stock.price = newPrice;
+
+      // A株（配当総数の例として表示）
+      const A = Math.floor(stock.dividend * 100);
+      notifyMsg += `🏢 **${name}**\n📈 株価: ${oldPrice} → **${newPrice}**（${diffRate.toFixed(2)}%）\n💰 配当: ${A} 株\n\n`;
+    }
+
+    saveData();
+
+    console.log(`📈 株価自動更新 (${data.stockIntervalHours}時間ごと実行)`);
+
+    // 通知送信
+    if (data.stockNotifyChannel) {
+      client.channels
+        .fetch(data.stockNotifyChannel)
+        .then(ch => ch.send(notifyMsg))
+        .catch(() => console.log("⚠️ 株価通知チャンネルに送信できませんでした。"));
+    }
+  }, intervalMs);
+}
+
+// 起動時に開始
+client.once("ready", () => {
+  restartStockFluctuation();
+});
+//==============================
+// 💹 株価自動変動＋通知システム（n時間ごと）
+//==============================
+
+// n時間ごとの変動設定
+if (!data.stockIntervalHours) data.stockIntervalHours = 3; // デフォルト3時間ごと
+if (!data.stockFluctuationRate) data.stockFluctuationRate = 5.0; // ±5%
+if (!data.stockNotifyChannel) data.stockNotifyChannel = null; // 通知チャンネルID
+
+// 💬 通知チャンネルを設定するスラッシュコマンド
+commands.push(
+  new SlashCommandBuilder()
+    .setName("setstockchannel")
+    .setDescription("株価変動通知を送信するチャンネルを設定します。")
+    .addChannelOption(o =>
+      o.setName("channel").setDescription("通知チャンネル").setRequired(true)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
+    .setName("setstockinterval")
+    .setDescription("株価が自動で変動する間隔（時間）を設定します。")
+    .addNumberOption(o =>
+      o.setName("hours").setDescription("間隔（時間単位）").setRequired(true)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+);
+
+// スラッシュコマンド処理追加
+client.on("interactionCreate", async i => {
+  if (!i.isChatInputCommand()) return;
+
+  // 📢 通知チャンネル設定
+  if (i.commandName === "setstockchannel") {
+    const ch = i.options.getChannel("channel");
+    data.stockNotifyChannel = ch.id;
+    saveData();
+    return i.reply(`📢 株価通知チャンネルを ${ch} に設定しました。`);
+  }
+
+  // ⏰ 更新間隔設定
+  if (i.commandName === "setstockinterval") {
+    const hours = i.options.getNumber("hours");
+    if (hours < 0.5) return i.reply("⏳ 最小でも0.5時間（30分）以上にしてください。");
+
+    data.stockIntervalHours = hours;
+    saveData();
+    restartStockFluctuation(); // 再起動
+    return i.reply(`⏰ 株価の自動更新間隔を **${hours}時間ごと** に設定しました。`);
+  }
+});
+
+// 💹 株価変動ロジック
+let stockFluctuationTimer = null;
+
+function restartStockFluctuation() {
+  if (stockFluctuationTimer) clearInterval(stockFluctuationTimer);
+
+  const intervalMs = data.stockIntervalHours * 60 * 60 * 1000;
+
+  stockFluctuationTimer = setInterval(() => {
+    if (!data.stocks || Object.keys(data.stocks).length === 0) return;
+
+    let notifyMsg = "💹 **株価更新情報** 💹\n";
+
+    for (const [name, stock] of Object.entries(data.stocks)) {
+      const oldPrice = stock.price;
+      const range = data.stockFluctuationRate;
+      const rate = (Math.random() * range * 2 - range) / 100; // ±range%
+      const newPrice = Math.max(10, Math.floor(oldPrice * (1 + rate)));
+      const diffRate = ((newPrice - oldPrice) / oldPrice) * 100;
+
+      stock.price = newPrice;
+
+      // A株（配当総数の例として表示）
+      const A = Math.floor(stock.dividend * 100);
+      notifyMsg += `🏢 **${name}**\n📈 株価: ${oldPrice} → **${newPrice}**（${diffRate.toFixed(2)}%）\n💰 配当: ${A} 株\n\n`;
+    }
+
+    saveData();
+
+    console.log(`📈 株価自動更新 (${data.stockIntervalHours}時間ごと実行)`);
+
+    // 通知送信
+    if (data.stockNotifyChannel) {
+      client.channels
+        .fetch(data.stockNotifyChannel)
+        .then(ch => ch.send(notifyMsg))
+        .catch(() => console.log("⚠️ 株価通知チャンネルに送信できませんでした。"));
+    }
+  }, intervalMs);
+}
+
+// 起動時に開始
+client.once("ready", () => {
+  restartStockFluctuation();
+});
 
 //==============================
 // 🔑 ログイン
