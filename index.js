@@ -1619,5 +1619,190 @@ client.on("interactionCreate", async i => {
     i.reply(`🕒 株価変動間隔を ${hours} 時間ごとに設定しました。`);
   }
 });
+//==============================
+// 🛍️ ショップ・アイテム機能
+//==============================
+
+// アイテムデータ保存
+const shopFile = path.join(__dirname, "shop.json");
+let shopData = fs.existsSync(shopFile) ? JSON.parse(fs.readFileSync(shopFile)) : {};
+
+function saveShop() {
+  fs.writeFileSync(shopFile, JSON.stringify(shopData, null, 2));
+}
+
+// 在庫初期化
+function initShop(gid) {
+  if (!shopData[gid]) {
+    shopData[gid] = { items: {}, inventory: {} };
+  }
+}
+
+//==============================
+// 🎮 ショップコマンド
+//==============================
+client.on("interactionCreate", async i => {
+  if (!i.isChatInputCommand()) return;
+  const gid = i.guild.id;
+  initShop(gid);
+  const shop = shopData[gid];
+  const uid = i.user.id;
+
+  // 💡 商品作成コマンド
+  if (i.commandName === "create_item") {
+    const name = i.options.getString("name");
+    const price = i.options.getInteger("price");
+    const cost = i.options.getInteger("cost");
+    const effect = i.options.getString("effect") || "なし";
+    const stock = i.options.getInteger("stock") || 1;
+
+    if (!shop.items[name]) {
+      shop.items[name] = {
+        creator: i.user.username,
+        price,
+        cost,
+        effect,
+        stock
+      };
+      saveShop();
+      return i.reply(`🛒 商品「${name}」を作成しました！\n💰価格: ${price}\n⚒️作成費: ${cost}\n🎁効果: ${effect}`);
+    } else {
+      return i.reply("⚠️ その商品名はすでに存在します。");
+    }
+  }
+
+  // 💰 商品を買う
+  if (i.commandName === "buy_item") {
+    const name = i.options.getString("name");
+    const amount = i.options.getInteger("amount") || 1;
+
+    if (!shop.items[name]) return i.reply("📦 その商品は存在しません。");
+    const item = shop.items[name];
+    if (item.stock < amount) return i.reply("🚫 在庫が足りません。");
+
+    const cost = item.price * amount;
+    initUser(gid, uid);
+    const u = getUser(gid, uid);
+    if (u.wallet < cost) return i.reply("💸 所持金が足りません。");
+
+    u.wallet -= cost;
+    item.stock -= amount;
+    shop.inventory[uid] = shop.inventory[uid] || {};
+    shop.inventory[uid][name] = (shop.inventory[uid][name] || 0) + amount;
+
+    saveShop();
+    saveData();
+    i.reply(`✅ ${amount}個の「${name}」を購入しました！`);
+  }
+
+  // 🎁 商品を使う
+  if (i.commandName === "use_item") {
+    const name = i.options.getString("name");
+    if (!shop.inventory[uid] || !shop.inventory[uid][name])
+      return i.reply("📦 その商品は持っていません。");
+
+    shop.inventory[uid][name]--;
+    if (shop.inventory[uid][name] <= 0) delete shop.inventory[uid][name];
+
+    const effect = shop.items[name]?.effect || "なし";
+    saveShop();
+
+    i.reply(`🎉 ${name} を使いました！効果: ${effect}`);
+  }
+
+  // 🤝 商品を渡す
+  if (i.commandName === "give_item") {
+    const target = i.options.getUser("user");
+    const name = i.options.getString("name");
+    const amount = i.options.getInteger("amount") || 1;
+
+    if (!shop.inventory[uid] || (shop.inventory[uid][name] || 0) < amount)
+      return i.reply("📦 その商品を十分に持っていません。");
+
+    shop.inventory[uid][name] -= amount;
+    if (shop.inventory[uid][name] <= 0) delete shop.inventory[uid][name];
+
+    shop.inventory[target.id] = shop.inventory[target.id] || {};
+    shop.inventory[target.id][name] = (shop.inventory[target.id][name] || 0) + amount;
+
+    saveShop();
+    i.reply(`🤝 ${target.username} さんに「${name}」を ${amount}個 渡しました！`);
+  }
+
+  // 🎒 インベントリ確認
+  if (i.commandName === "inventory") {
+    const inv = shop.inventory[uid];
+    if (!inv || Object.keys(inv).length === 0)
+      return i.reply("🎒 持ち物は空です。");
+
+    const list = Object.entries(inv)
+      .map(([n, c]) => `・${n} ×${c}`)
+      .join("\n");
+    i.reply(`🎒 **${i.user.username}の持ち物**\n${list}`);
+  }
+
+  // 🏪 商品一覧
+  if (i.commandName === "shop_list") {
+    const list = Object.entries(shop.items)
+      .map(
+        ([n, d]) =>
+          `📦 **${n}** — 💰${d.price}（在庫:${d.stock}） 作成者:${d.creator}\n効果:${d.effect}`
+      )
+      .join("\n\n");
+    i.reply(list || "🏪 登録商品はまだありません。");
+  }
+});
+
+//==============================
+// 🧾 コマンド登録
+//==============================
+const shopCommands = [
+  new SlashCommandBuilder()
+    .setName("create_item")
+    .setDescription("商品を作成します（効果付きも可）")
+    .addStringOption(o => o.setName("name").setDescription("商品名").setRequired(true))
+    .addIntegerOption(o => o.setName("price").setDescription("販売価格").setRequired(true))
+    .addIntegerOption(o => o.setName("cost").setDescription("作成にかかるお金").setRequired(true))
+    .addIntegerOption(o => o.setName("stock").setDescription("在庫数").setRequired(false))
+    .addStringOption(o => o.setName("effect").setDescription("商品を使ったときの効果").setRequired(false))
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
+    .setName("buy_item")
+    .setDescription("商品を購入します")
+    .addStringOption(o => o.setName("name").setDescription("商品名").setRequired(true))
+    .addIntegerOption(o => o.setName("amount").setDescription("購入数").setRequired(false)),
+
+  new SlashCommandBuilder()
+    .setName("use_item")
+    .setDescription("持っている商品を使います")
+    .addStringOption(o => o.setName("name").setDescription("商品名").setRequired(true)),
+
+  new SlashCommandBuilder()
+    .setName("give_item")
+    .setDescription("他のユーザーに商品を渡します")
+    .addUserOption(o => o.setName("user").setDescription("渡す相手").setRequired(true))
+    .addStringOption(o => o.setName("name").setDescription("商品名").setRequired(true))
+    .addIntegerOption(o => o.setName("amount").setDescription("渡す個数").setRequired(false)),
+
+  new SlashCommandBuilder()
+    .setName("inventory")
+    .setDescription("自分の持ち物を確認します"),
+
+  new SlashCommandBuilder()
+    .setName("shop_list")
+    .setDescription("登録されている全商品を表示します")
+].map(c => c.toJSON());
+
+(async () => {
+  try {
+    await rest.put(Routes.applicationCommands(CLIENT_ID), {
+      body: [...commands, ...shopCommands]
+    });
+    console.log("✅ ショップコマンド登録完了！");
+  } catch (err) {
+    console.error(err);
+  }
+})();
 
 client.login(TOKEN);
