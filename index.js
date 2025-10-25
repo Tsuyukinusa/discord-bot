@@ -1186,6 +1186,100 @@ client.on("interactionCreate", async i => {
     return i.reply({ content: `📊 ${company} の株価推移です。`, files: [graph] });
   }
 });
+import matplotlib.pyplot as plt
+import random
+import asyncio
+from datetime import datetime, timedelta
+import io
+import discord
+
+# ====== 株価データと設定 ======
+stock_data = {
+    "name": "株式会社A",
+    "price": 1000,
+    "dividend": 5.0,  # 配当割合（%）
+    "history": []
+}
+
+stock_settings = {
+    "change_rate": 5.0,  # 株価変動率 ±%
+    "change_hour": 9,    # 株価変動を行う時刻（例：毎日9時）
+    "change_count_per_day": 1  # 1日に何回変動するか
+}
+
+# ====== 株価変動設定コマンド ======
+@bot.tree.command(name="setstock", description="株の基本情報を設定します（管理者専用）")
+@app_commands.describe(
+    name="会社名",
+    change_rate="株価変動率（±％）",
+    change_hour="株価変動を行う時刻（0〜23）",
+    change_count="1日に株価を変動させる回数"
+)
+@commands.has_permissions(administrator=True)
+async def setstock(interaction: discord.Interaction, name: str, change_rate: float, change_hour: int, change_count: int):
+    stock_data["name"] = name
+    stock_settings["change_rate"] = change_rate
+    stock_settings["change_hour"] = change_hour
+    stock_settings["change_count_per_day"] = change_count
+
+    await interaction.response.send_message(
+        f"✅ 株設定を更新しました！\n"
+        f"会社名：{name}\n"
+        f"変動率：±{change_rate}%\n"
+        f"変動時間：毎日{change_hour}時\n"
+        f"1日あたり変動回数：{change_count}回"
+    )
+
+# ====== 株価を変動させる処理 ======
+async def update_stock_price():
+    while True:
+        now = datetime.now()
+        change_hour = stock_settings["change_hour"]
+        change_count = stock_settings["change_count_per_day"]
+
+        # 1日に複数回変動する場合
+        intervals = [change_hour + i * (24 // change_count) for i in range(change_count)]
+
+        for hour in intervals:
+            # 次の更新時刻を計算
+            next_update = datetime(now.year, now.month, now.day, hour, 0)
+            if now >= next_update:
+                next_update += timedelta(days=1)
+
+            wait_time = (next_update - now).total_seconds()
+            await asyncio.sleep(wait_time)
+
+            # 株価を変動させる
+            old_price = stock_data["price"]
+            rate = random.uniform(-stock_settings["change_rate"], stock_settings["change_rate"])
+            new_price = round(old_price * (1 + rate / 100))
+            stock_data["price"] = new_price
+
+            # 履歴を保存
+            stock_data["history"].append((datetime.now(), new_price))
+            if len(stock_data["history"]) > 50:
+                stock_data["history"].pop(0)
+
+            # 配当の計算
+            dividend_total = round(new_price * stock_data["dividend"] / 100)
+
+            # グラフ生成
+            times = [t.strftime("%H:%M") for t, _ in stock_data["history"]]
+            prices = [p for _, p in stock_data["history"]]
+            plt.figure(figsize=(6, 3))
+            plt.plot(times, prices, marker="o", linestyle="-", label="株価推移")
+            plt.title(f"{stock_data['name']} 株価推移")
+            plt.xlabel("時間")
+            plt.ylabel("株価")
+            plt.grid(True)
+            plt.legend()
+            buf = io.BytesIO()
+            plt.savefig(buf, format="png")
+            buf.seek(0)
+            plt.close()
+
+            # 通知送信
+            channel = discord.
 
 //==============================
 // 🔑 ログイン
