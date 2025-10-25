@@ -1397,6 +1397,137 @@ async def auto_stock_update():
 async def on_ready():
     print(f"✅ Bot起動完了: {bot.user}")
     bot.loop.create_task(auto_stock_update())
+# ====== ユーザーの所持データ ======
+user_data = {}  # {user_id: {"money": int, "stocks": {会社名: {"amount": int, "avg_price": float}}}}
+
+def get_user(uid):
+    if uid not in user_data:
+        user_data[uid] = {"money": 100000, "stocks": {}}
+    return user_data[uid]
+
+# ====== 個別株情報を表示 ======
+@bot.tree.command(name="stockinfo", description="指定した会社の株情報とグラフを表示します")
+@app_commands.describe(name="会社名")
+async def stockinfo(interaction: discord.Interaction, name: str):
+    if name not in stocks:
+        await interaction.response.send_message("⚠️ その会社は存在しません。")
+        return
+
+    data = stocks[name]
+    times = [t.strftime("%H:%M") for t, _ in data["history"]]
+    prices = [p for _, p in data["history"]]
+
+    # グラフ作成
+    plt.figure(figsize=(6, 3))
+    plt.plot(times, prices, marker="o", linestyle="-", label="株価推移")
+    plt.title(f"{name} 株価推移")
+    plt.xlabel("時間")
+    plt.ylabel("株価（円）")
+    plt.grid(True)
+    plt.legend()
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    buf.seek(0)
+    plt.close()
+
+    embed = discord.Embed(
+        title=f"🏢 {name} の株情報",
+        description=(
+            f"📈 現在株価: {data['price']}円\n"
+            f"💰 配当率: {data['dividend']}%\n"
+            f"📊 株価変動率: ±{data['rate']}%"
+        ),
+        color=discord.Color.blue()
+    )
+    file = discord.File(buf, filename=f"{name}_chart.png")
+    embed.set_image(url=f"attachment://{name}_chart.png")
+
+    await interaction.response.send_message(embed=embed, file=file)
+
+# ====== 株を購入 ======
+@bot.tree.command(name="buy", description="株を購入します")
+@app_commands.describe(name="会社名", amount="購入株数")
+async def buy(interaction: discord.Interaction, name: str, amount: int):
+    user = get_user(interaction.user.id)
+    if name not in stocks:
+        await interaction.response.send_message("⚠️ その会社は存在しません。")
+        return
+
+    if amount <= 0:
+        await interaction.response.send_message("⚠️ 正しい株数を入力してください。")
+        return
+
+    price = stocks[name]["price"] * amount
+    if user["money"] < price:
+        await interaction.response.send_message(f"💸 所持金が足りません！必要金額: {price}円")
+        return
+
+    user["money"] -= price
+    stock_info = user["stocks"].get(name, {"amount": 0, "avg_price": 0})
+    total_cost = stock_info["avg_price"] * stock_info["amount"] + stocks[name]["price"] * amount
+    total_shares = stock_info["amount"] + amount
+    stock_info["avg_price"] = total_cost / total_shares
+    stock_info["amount"] = total_shares
+    user["stocks"][name] = stock_info
+
+    await interaction.response.send_message(
+        f"✅ {name} の株を {amount} 株購入しました！\n"
+        f"💰 残高: {user['money']}円\n"
+        f"📈 平均取得価格: {round(stock_info['avg_price'])}円"
+    )
+
+# ====== 株を売却 ======
+@bot.tree.command(name="sell", description="株を売却します")
+@app_commands.describe(name="会社名", amount="売却株数")
+async def sell(interaction: discord.Interaction, name: str, amount: int):
+    user = get_user(interaction.user.id)
+    if name not in stocks:
+        await interaction.response.send_message("⚠️ その会社は存在しません。")
+        return
+
+    if name not in user["stocks"] or user["stocks"][name]["amount"] < amount:
+        await interaction.response.send_message("⚠️ 売却できる株数が足りません。")
+        return
+
+    if amount <= 0:
+        await interaction.response.send_message("⚠️ 正しい株数を入力してください。")
+        return
+
+    sell_price = stocks[name]["price"] * amount
+    user["money"] += sell_price
+    user["stocks"][name]["amount"] -= amount
+
+    if user["stocks"][name]["amount"] == 0:
+        del user["stocks"][name]
+
+    await interaction.response.send_message(
+        f"💹 {name} の株を {amount} 株売却しました！\n"
+        f"📦 受取金額: {sell_price}円\n"
+        f"💰 残高: {user['money']}円"
+    )
+
+# ====== 自分の保有株を見る ======
+@bot.tree.command(name="mystocks", description="自分の保有株を確認します")
+async def mystocks(interaction: discord.Interaction):
+    user = get_user(interaction.user.id)
+    if not user["stocks"]:
+        await interaction.response.send_message("📭 現在保有している株はありません。")
+        return
+
+    desc = f"💰 所持金: {user['money']}円\n\n"
+    for name, info in user["stocks"].items():
+        now_price = stocks[name]["price"]
+        gain = (now_price - info["avg_price"]) * info["amount"]
+        desc += (
+            f"🏢 {name}\n"
+            f"株数: {info['amount']} 株\n"
+            f"平均取得: {round(info['avg_price'])}円\n"
+            f"現在株価: {now_price}円\n"
+            f"損益: {'+' if gain>=0 else ''}{round(gain)}円\n\n"
+        )
+
+    embed = discord.Embed(title="📊 保有株一覧", description=desc, color=discord.Color.gold())
+    await interaction.response.send_message(embed=embed)
 
 //==============================
 // 🔑 ログイン
