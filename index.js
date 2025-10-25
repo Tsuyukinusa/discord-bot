@@ -1528,6 +1528,192 @@ async def mystocks(interaction: discord.Interaction):
 
     embed = discord.Embed(title="📊 保有株一覧", description=desc, color=discord.Color.gold())
     await interaction.response.send_message(embed=embed)
+// ==============================
+// 💹 株システム & グラフ機能
+// ==============================
+const { AttachmentBuilder, EmbedBuilder } = require("discord.js");
+const { createCanvas } = require("canvas");
+
+// ====== データ保存ファイル ======
+const stockFile = path.join(__dirname, "stocks.json");
+const userFile = path.join(__dirname, "users.json");
+
+let stocks = fs.existsSync(stockFile)
+  ? JSON.parse(fs.readFileSync(stockFile))
+  : {};
+let users = fs.existsSync(userFile)
+  ? JSON.parse(fs.readFileSync(userFile))
+  : {};
+
+function saveStocks() {
+  fs.writeFileSync(stockFile, JSON.stringify(stocks, null, 2));
+}
+function saveUsers() {
+  fs.writeFileSync(userFile, JSON.stringify(users, null, 2));
+}
+
+function getUser(uid) {
+  if (!users[uid]) users[uid] = { money: 100000, stocks: {} };
+  return users[uid];
+}
+
+// ====== 株会社の登録 ======
+client.on("ready", () => {
+  if (Object.keys(stocks).length === 0) {
+    stocks = {
+      "NusaTech": {
+        price: 1000,
+        dividend: 3,
+        rate: 5,
+        history: [],
+      },
+      "ShinoaFoods": {
+        price: 800,
+        dividend: 2,
+        rate: 3,
+        history: [],
+      },
+    };
+    saveStocks();
+  }
+});
+
+// ====== 株価変動設定 ======
+const stockChange = {
+  intervalHours: 3, // 何時間ごとに変動するか（管理者が後で変更可）
+  targetTime: "12:00", // 特定時間指定も可能（例: "09:00"）
+};
+
+// ====== 株価変動関数 ======
+function updateStockPrices() {
+  const now = new Date();
+  for (const [name, s] of Object.entries(stocks)) {
+    const change = (Math.random() * 2 - 1) * s.rate;
+    const newPrice = Math.max(10, Math.round(s.price * (1 + change / 100)));
+
+    s.history.push({ time: now.toLocaleTimeString(), price: newPrice });
+    if (s.history.length > 15) s.history.shift();
+
+    const diff = newPrice - s.price;
+    const sign = diff >= 0 ? "📈" : "📉";
+    s.price = newPrice;
+
+    // 配当金 (全員に配る)
+    let totalDiv = 0;
+    for (const [uid, u] of Object.entries(users)) {
+      if (u.stocks[name]) {
+        const div = Math.round(u.stocks[name].amount * (s.dividend / 100));
+        if (div > 0) {
+          u.money += div;
+          totalDiv += div;
+          const userObj = client.users.cache.get(uid);
+          if (userObj) {
+            userObj.send(`💰 株式会社「${name}」から配当 ${div}A を受け取りました！`).catch(() => {});
+          }
+        }
+      }
+    }
+
+    saveUsers();
+
+    // 通知チャンネルが設定されていれば送信
+    const channel = Object.values(data)
+      .map(g => g.levelUpChannel && client.channels.cache.get(g.levelUpChannel))
+      .find(c => c);
+    if (channel) {
+      channel.send(
+        `🏢 **${name}** 株価更新\n${sign} 新価格: ${newPrice}円（変動率: ${change.toFixed(2)}%）\n💸 総配当: ${totalDiv}A`
+      );
+    }
+  }
+  saveStocks();
+}
+
+// ====== 株価を定期的に変動 ======
+setInterval(updateStockPrices, stockChange.intervalHours * 60 * 60 * 1000);
+
+// ==============================
+// 📈 株情報コマンド群
+// ==============================
+client.on("interactionCreate", async i => {
+  if (!i.isChatInputCommand()) return;
+
+  // /stockinfo
+  if (i.commandName === "stockinfo") {
+    const name = i.options.getString("name");
+    if (!stocks[name]) return i.reply("⚠️ その会社は存在しません。");
+
+    const s = stocks[name];
+    const canvas = createCanvas(600, 300);
+    const ctx = canvas.getContext("2d");
+
+    // 背景
+    ctx.fillStyle = "#0d1117";
+    ctx.fillRect(0, 0, 600, 300);
+
+    // 枠線
+    ctx.strokeStyle = "#58a6ff";
+    ctx.strokeRect(20, 20, 560, 260);
+
+    // グラフ描画
+    const history = s.history.length ? s.history : [{ time: "開始", price: s.price }];
+    const prices = history.map(h => h.price);
+    const max = Math.max(...prices);
+    const min = Math.min(...prices);
+    const scaleY = 200 / (max - min || 1);
+
+    ctx.beginPath();
+    ctx.moveTo(40, 280 - (prices[0] - min) * scaleY);
+    prices.forEach((p, idx) => {
+      const x = 40 + (idx / (prices.length - 1 || 1)) * 520;
+      const y = 280 - (p - min) * scaleY;
+      ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = "#00ffb3";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // テキスト
+    ctx.fillStyle = "#fff";
+    ctx.font = "18px Sans";
+    ctx.fillText(`${name} 株価推移`, 40, 40);
+    ctx.fillText(`現在株価: ${s.price}円`, 40, 70);
+    ctx.fillText(`配当: ${s.dividend}%`, 40, 100);
+    ctx.fillText(`変動率: ±${s.rate}%`, 40, 130);
+
+    const attachment = new AttachmentBuilder(canvas.toBuffer(), { name: `${name}_chart.png` });
+
+    const embed = new EmbedBuilder()
+      .setTitle(`🏢 ${name} の株情報`)
+      .setDescription(`💰 現在株価: ${s.price}円\n📊 配当: ${s.dividend}%\n📈 変動率: ±${s.rate}%`)
+      .setColor("Blue")
+      .setImage(`attachment://${name}_chart.png`);
+
+    await i.reply({ embeds: [embed], files: [attachment] });
+  }
+
+  // /setstock
+  if (i.commandName === "setstock") {
+    if (!i.member.permissions.has("Administrator")) return i.reply("⚠️ 管理者のみ実行可能です。");
+
+    const name = i.options.getString("name");
+    const price = i.options.getInteger("price");
+    const div = i.options.getNumber("dividend");
+    const rate = i.options.getNumber("rate");
+
+    stocks[name] = { price, dividend: div, rate, history: [] };
+    saveStocks();
+    i.reply(`🏢 株式会社「${name}」を登録しました。\n株価: ${price}円 / 配当: ${div}% / 変動率: ±${rate}%`);
+  }
+
+  // /setstockinterval
+  if (i.commandName === "setstockinterval") {
+    if (!i.member.permissions.has("Administrator")) return i.reply("⚠️ 管理者のみ実行可能です。");
+    const hours = i.options.getInteger("hours");
+    stockChange.intervalHours = hours;
+    i.reply(`🕒 株価変動間隔を ${hours} 時間ごとに設定しました。`);
+  }
+});
 
 //==============================
 // 🔑 ログイン
