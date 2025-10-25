@@ -523,6 +523,122 @@ client.on("interactionCreate", async i => {
     return i.reply(`💸 ${user.username} から ${formatCurrency(amount, gid)} 減額しました。`);
   }
 });
+//==============================
+// 💰 経済・持ち物・株・利息システム
+//==============================
+
+if (!data.economy) data.economy = {};
+if (!data.items) data.items = {};
+if (!data.stocks) {
+  data.stocks = {
+    "NusaTech": { price: 120, dividend: 2.5 },
+    "KumaFoods": { price: 85, dividend: 1.8 },
+    "ShinoaEnergy": { price: 210, dividend: 3.2 }
+  };
+}
+if (!data.interestPeriod) data.interestPeriod = 7;
+
+// 💰 経済データ初期化
+function initUser(gid, uid) {
+  if (!data.economy[gid]) data.economy[gid] = {};
+  if (!data.economy[gid][uid])
+    data.economy[gid][uid] = { balance: 1000, lastWork: 0, items: [] };
+}
+
+//==============================
+// 💰 コマンド登録追加
+//==============================
+commands.push(
+  new SlashCommandBuilder().setName("balance").setDescription("自分の所持金を確認します。"),
+  new SlashCommandBuilder().setName("work").setDescription("働いてお金を稼ぎます。"),
+  new SlashCommandBuilder().setName("inventory").setDescription("自分の持ち物を確認します。"),
+  new SlashCommandBuilder()
+    .setName("giveitem")
+    .setDescription("他のユーザーにアイテムを渡します。")
+    .addUserOption(o => o.setName("user").setDescription("相手").setRequired(true))
+    .addStringOption(o => o.setName("item").setDescription("渡すアイテム名").setRequired(true)),
+  new SlashCommandBuilder()
+    .setName("stocks")
+    .setDescription("株の一覧を表示します。"),
+  new SlashCommandBuilder()
+    .setName("setinterest")
+    .setDescription("利息付与の期間を設定します（日単位）")
+    .addIntegerOption(o => o.setName("days").setDescription("期間（日）").setRequired(true))
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+);
+
+//==============================
+// 💰 コマンド動作追加
+//==============================
+client.on("interactionCreate", async i => {
+  if (!i.isChatInputCommand()) return;
+  const gid = i.guild?.id;
+  if (!gid) return;
+  initGuild(gid);
+
+  const uid = i.user.id;
+  initUser(gid, uid);
+
+  // 💰 balance
+  if (i.commandName === "balance") {
+    const bal = data.economy[gid][uid].balance;
+    return i.reply(`💰 ${i.user.username} さんの所持金：**${bal}** コイン`);
+  }
+
+  // 💼 work
+  if (i.commandName === "work") {
+    const now = Date.now();
+    const user = data.economy[gid][uid];
+    const cooldown = 1000 * 60 * 5; // 5分クールダウン
+    if (now - user.lastWork < cooldown) {
+      const left = Math.ceil((cooldown - (now - user.lastWork)) / 60000);
+      return i.reply(`⏳ もう少し休憩を！あと ${left} 分後に再度働けます。`);
+    }
+    const earn = Math.floor(Math.random() * 200) + 50;
+    user.balance += earn;
+    user.lastWork = now;
+    saveData();
+    return i.reply(`💼 ${i.user.username} さんは働いて **${earn} コイン** 稼ぎました！`);
+  }
+
+  // 📦 inventory
+  if (i.commandName === "inventory") {
+    const items = data.economy[gid][uid].items;
+    if (items.length === 0) return i.reply("📦 持ち物は空です。");
+    return i.reply(`🎒 ${i.user.username} さんの持ち物：\n${items.join(", ")}`);
+  }
+
+  // 🎁 giveitem
+  if (i.commandName === "giveitem") {
+    const target = i.options.getUser("user");
+    const item = i.options.getString("item");
+    initUser(gid, target.id);
+
+    const user = data.economy[gid][uid];
+    if (!user.items.includes(item)) return i.reply("❌ そのアイテムは持っていません。");
+
+    user.items = user.items.filter(i => i !== item);
+    data.economy[gid][target.id].items.push(item);
+    saveData();
+    return i.reply(`🎁 ${i.user.username} さんが ${target.username} さんに「${item}」を渡しました。`);
+  }
+
+  // 📈 stocks
+  if (i.commandName === "stocks") {
+    const stockList = Object.entries(data.stocks)
+      .map(([name, info]) => `📊 **${name}** — 💵${info.price} ｜ 💰配当: ${info.dividend}%`)
+      .join("\n");
+    return i.reply(`🏦 **株式一覧**\n${stockList}`);
+  }
+
+  // 🏦 setinterest
+  if (i.commandName === "setinterest") {
+    const days = i.options.getInteger("days");
+    data.interestPeriod = days;
+    saveData();
+    return i.reply(`🏦 利息の付与期間を **${days}日** に設定しました。`);
+  }
+});
 
 //==============================
 // 🔑 ログイン
