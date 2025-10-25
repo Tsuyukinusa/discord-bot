@@ -1,7 +1,3 @@
-//==============================
-// ⚙️ Discord多機能Bot 完全統合版
-//==============================
-
 const {
   Client,
   GatewayIntentBits,
@@ -16,9 +12,6 @@ const path = require("path");
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 
-//==============================
-// 🎯 クライアント設定
-//==============================
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -37,9 +30,6 @@ client.on("messageCreate", msg => {
   if (msg.content === "ぬさ") msg.channel.send("ぬさw");
 });
 
-//==============================
-// 💾 データ保存
-//==============================
 const dataFile = path.join(__dirname, "data.json");
 let data = fs.existsSync(dataFile) ? JSON.parse(fs.readFileSync(dataFile)) : {};
 
@@ -68,9 +58,6 @@ function initGuild(gid) {
   }
 }
 
-//==============================
-// 🎉 お迎え
-//==============================
 client.on("guildMemberAdd", member => {
   const gid = member.guild.id;
   initGuild(gid);
@@ -84,9 +71,6 @@ client.on("guildMemberAdd", member => {
   if (ch) ch.send(g.welcomeMessage.replace("{user}", member.user.username));
 });
 
-//==============================
-// 💬 TXP加算
-//==============================
 client.on("messageCreate", message => {
   if (!message.guild || message.author.bot) return;
   const gid = message.guild.id;
@@ -103,9 +87,6 @@ client.on("messageCreate", message => {
   saveData();
 });
 
-//==============================
-// 🎧 VXP加算
-//==============================
 const voiceTimes = new Map();
 
 client.on("voiceStateUpdate", (oldS, newS) => {
@@ -129,9 +110,6 @@ client.on("voiceStateUpdate", (oldS, newS) => {
   }
 });
 
-//==============================
-// 🆙 レベルアップ判定
-//==============================
 function checkLevelUp(member, g) {
   const uid = member.id;
   g.levels[uid] = g.levels[uid] || 0;
@@ -163,9 +141,6 @@ function checkLevelUp(member, g) {
   }
 }
 
-//==============================
-// ⚙️ スラッシュコマンド
-//==============================
 const commands = [
   new SlashCommandBuilder().setName("rank").setDescription("自分のランクを確認します。"),
   new SlashCommandBuilder()
@@ -206,9 +181,6 @@ const commands = [
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
 ].map(c => c.toJSON());
 
-//==============================
-// 🚀 登録
-//==============================
 const rest = new REST({ version: "10" }).setToken(TOKEN);
 (async () => {
   try {
@@ -219,9 +191,6 @@ const rest = new REST({ version: "10" }).setToken(TOKEN);
   }
 })();
 
-//==============================
-// 🎮 コマンド実行
-//==============================
 client.on("interactionCreate", async i => {
   if (!i.isChatInputCommand()) return;
   const gid = i.guild.id;
@@ -286,9 +255,6 @@ client.on("interactionCreate", async i => {
     return i.reply("📩 お迎えメッセージの送信チャンネルを設定しました。");
   }
 });
-//==============================
-// 💰 経済システム
-//==============================
 
 if (!data.economy) data.economy = {};
 saveData();
@@ -316,9 +282,6 @@ function formatCurrency(amount, gid) {
   return `${currency}${amount} ${name}`;
 }
 
-//==============================
-// 🪙 経済系スラッシュコマンド登録
-//==============================
 const economyCommands = [
   // 👤 残高確認
   new SlashCommandBuilder()
@@ -391,9 +354,6 @@ const economyCommands = [
   }
 })();
 
-//==============================
-// 💰 経済コマンド実行
-//==============================
 const workCooldown = new Map();
 const crimeCooldown = new Map();
 
@@ -523,9 +483,6 @@ client.on("interactionCreate", async i => {
     return i.reply(`💸 ${user.username} から ${formatCurrency(amount, gid)} 減額しました。`);
   }
 });
-//==============================
-// 💰 経済・持ち物・株・利息システム
-//==============================
 
 if (!data.economy) data.economy = {};
 if (!data.items) data.items = {};
@@ -545,9 +502,6 @@ function initUser(gid, uid) {
     data.economy[gid][uid] = { balance: 1000, lastWork: 0, items: [] };
 }
 
-//==============================
-// 💰 コマンド登録追加
-//==============================
 commands.push(
   new SlashCommandBuilder().setName("balance").setDescription("自分の所持金を確認します。"),
   new SlashCommandBuilder().setName("work").setDescription("働いてお金を稼ぎます。"),
@@ -567,9 +521,6 @@ commands.push(
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
 );
 
-//==============================
-// 💰 コマンド動作追加
-//==============================
 client.on("interactionCreate", async i => {
   if (!i.isChatInputCommand()) return;
   const gid = i.guild?.id;
@@ -639,9 +590,6 @@ client.on("interactionCreate", async i => {
     return i.reply(`🏦 利息の付与期間を **${days}日** に設定しました。`);
   }
 });
-//==============================
-// 💹 株式管理・一覧・編集システム
-//==============================
 
 if (!data.stocks) data.stocks = {};
 if (!data.stockIntervalHours) data.stockIntervalHours = 1;
@@ -651,9 +599,6 @@ function saveData() {
   fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
 }
 
-//==============================
-// ⚙️ コマンド登録追加
-//==============================
 commands.push(
   new SlashCommandBuilder()
     .setName("addstock")
@@ -682,9 +627,6 @@ commands.push(
     .setDescription("登録されている株会社一覧を表示します。")
 );
 
-//==============================
-// ⚙️ コマンド処理
-//==============================
 client.on("interactionCreate", async i => {
   if (!i.isChatInputCommand()) return;
   const gid = i.guild?.id;
@@ -740,9 +682,6 @@ client.on("interactionCreate", async i => {
   }
 });
 
-//==============================
-// 💹 株価の自動変動
-//==============================
 let stockIntervalTask = null;
 
 function restartStockInterval() {
@@ -761,9 +700,6 @@ function restartStockInterval() {
 }
 
 restartStockInterval();
-//==============================
-// 💹 株価自動変動＋通知システム（n時間ごと）
-//==============================
 
 // n時間ごとの変動設定
 if (!data.stockIntervalHours) data.stockIntervalHours = 3; // デフォルト3時間ごと
@@ -858,9 +794,6 @@ function restartStockFluctuation() {
 client.once("ready", () => {
   restartStockFluctuation();
 });
-//==============================
-// 💹 株価自動変動＋通知システム（n時間ごと）
-//==============================
 
 // n時間ごとの変動設定
 if (!data.stockIntervalHours) data.stockIntervalHours = 3; // デフォルト3時間ごと
@@ -955,9 +888,7 @@ function restartStockFluctuation() {
 client.once("ready", () => {
   restartStockFluctuation();
 });
-//==============================
-// 📊 株価変動率設定コマンド追加
-//==============================
+
 commands.push(
   new SlashCommandBuilder()
     .setName("setfluctuationrate")
@@ -984,9 +915,7 @@ client.on("interactionCreate", async i => {
     return i.reply(`📈 株価変動率を ±${rate}% に設定しました！`);
   }
 });
-//==============================
-// 📈 株価履歴グラフ機能
-//==============================
+
 const { createCanvas } = require("canvas");
 const { AttachmentBuilder } = require("discord.js");
 
@@ -1004,9 +933,6 @@ function recordStockPrice(company, price) {
   saveData();
 }
 
-//==============================
-// 💬 /stockgraph コマンド登録
-//==============================
 commands.push(
   new SlashCommandBuilder()
     .setName("stockgraph")
@@ -1016,9 +942,6 @@ commands.push(
     )
 );
 
-//==============================
-// 📊 グラフ生成関数
-//==============================
 async function generateStockGraph(company) {
   const prices = data.stockHistory[company];
   if (!prices || prices.length < 2) return null;
@@ -1064,9 +987,6 @@ async function generateStockGraph(company) {
   return new AttachmentBuilder(canvas.toBuffer(), { name: `${company}_graph.png` });
 }
 
-//==============================
-// 🎮 コマンド処理追加
-//==============================
 client.on("interactionCreate", async i => {
   if (!i.isChatInputCommand()) return;
 
@@ -1085,9 +1005,7 @@ client.on("interactionCreate", async i => {
     return i.reply({ content: `📊 ${company} の株価推移です。`, files: [graph] });
   }
 });
-//==============================
-// 📈 株価履歴グラフ機能
-//==============================
+
 const { createCanvas } = require("canvas");
 const { AttachmentBuilder } = require("discord.js");
 
@@ -1105,9 +1023,6 @@ function recordStockPrice(company, price) {
   saveData();
 }
 
-//==============================
-// 💬 /stockgraph コマンド登録
-//==============================
 commands.push(
   new SlashCommandBuilder()
     .setName("stockgraph")
@@ -1117,9 +1032,6 @@ commands.push(
     )
 );
 
-//==============================
-// 📊 グラフ生成関数
-//==============================
 async function generateStockGraph(company) {
   const prices = data.stockHistory[company];
   if (!prices || prices.length < 2) return null;
@@ -1164,10 +1076,6 @@ async function generateStockGraph(company) {
 
   return new AttachmentBuilder(canvas.toBuffer(), { name: `${company}_graph.png` });
 }
-
-//==============================
-// 🎮 コマンド処理追加
-//==============================
 client.on("interactionCreate", async i => {
   if (!i.isChatInputCommand()) return;
 
@@ -1528,9 +1436,6 @@ async def mystocks(interaction: discord.Interaction):
 
     embed = discord.Embed(title="📊 保有株一覧", description=desc, color=discord.Color.gold())
     await interaction.response.send_message(embed=embed)
-// ==============================
-// 💹 株システム & グラフ機能
-// ==============================
 const { AttachmentBuilder, EmbedBuilder } = require("discord.js");
 const { createCanvas } = require("canvas");
 
@@ -1632,9 +1537,6 @@ function updateStockPrices() {
 // ====== 株価を定期的に変動 ======
 setInterval(updateStockPrices, stockChange.intervalHours * 60 * 60 * 1000);
 
-// ==============================
-// 📈 株情報コマンド群
-// ==============================
 client.on("interactionCreate", async i => {
   if (!i.isChatInputCommand()) return;
 
@@ -1715,7 +1617,4 @@ client.on("interactionCreate", async i => {
   }
 });
 
-//==============================
-// 🔑 ログイン
-//==============================
 client.login(TOKEN);
