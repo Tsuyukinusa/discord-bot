@@ -984,6 +984,208 @@ client.on("interactionCreate", async i => {
     return i.reply(`📈 株価変動率を ±${rate}% に設定しました！`);
   }
 });
+//==============================
+// 📈 株価履歴グラフ機能
+//==============================
+const { createCanvas } = require("canvas");
+const { AttachmentBuilder } = require("discord.js");
+
+// 株価履歴を保存する構造
+if (!data.stockHistory) data.stockHistory = {}; // { companyName: [価格, 価格, ...] }
+
+function recordStockPrice(company, price) {
+  if (!data.stockHistory[company]) data.stockHistory[company] = [];
+  data.stockHistory[company].push(price);
+
+  // 履歴が100件を超えたら古いものを削除
+  if (data.stockHistory[company].length > 100) {
+    data.stockHistory[company].shift();
+  }
+  saveData();
+}
+
+//==============================
+// 💬 /stockgraph コマンド登録
+//==============================
+commands.push(
+  new SlashCommandBuilder()
+    .setName("stockgraph")
+    .setDescription("指定した会社の株価履歴グラフを表示します。")
+    .addStringOption(o =>
+      o.setName("company").setDescription("会社名").setRequired(true)
+    )
+);
+
+//==============================
+// 📊 グラフ生成関数
+//==============================
+async function generateStockGraph(company) {
+  const prices = data.stockHistory[company];
+  if (!prices || prices.length < 2) return null;
+
+  const width = 800;
+  const height = 400;
+  const canvas = createCanvas(width, height);
+  const ctx = canvas.getContext("2d");
+
+  // 背景
+  ctx.fillStyle = "#202225";
+  ctx.fillRect(0, 0, width, height);
+
+  // 枠線
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(40, 20, width - 60, height - 60);
+
+  // スケール
+  const max = Math.max(...prices);
+  const min = Math.min(...prices);
+  const range = max - min || 1;
+
+  // 折れ線グラフ
+  ctx.beginPath();
+  ctx.strokeStyle = "#00ff88";
+  ctx.lineWidth = 3;
+
+  prices.forEach((p, i) => {
+    const x = 40 + (i / (prices.length - 1)) * (width - 80);
+    const y = height - 40 - ((p - min) / range) * (height - 80);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // テキスト
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "20px Sans";
+  ctx.fillText(`📈 ${company} 株価履歴`, 50, 40);
+  ctx.fillText(`最新価格: ${prices[prices.length - 1]}`, 50, height - 15);
+
+  return new AttachmentBuilder(canvas.toBuffer(), { name: `${company}_graph.png` });
+}
+
+//==============================
+// 🎮 コマンド処理追加
+//==============================
+client.on("interactionCreate", async i => {
+  if (!i.isChatInputCommand()) return;
+
+  if (i.commandName === "stockgraph") {
+    const company = i.options.getString("company");
+
+    if (!data.stocks || !data.stocks[company]) {
+      return i.reply("❌ その会社は存在しません。");
+    }
+
+    const graph = await generateStockGraph(company);
+    if (!graph) {
+      return i.reply("📉 株価履歴が少なすぎます。もう少し経過を待ってください。");
+    }
+
+    return i.reply({ content: `📊 ${company} の株価推移です。`, files: [graph] });
+  }
+});
+//==============================
+// 📈 株価履歴グラフ機能
+//==============================
+const { createCanvas } = require("canvas");
+const { AttachmentBuilder } = require("discord.js");
+
+// 株価履歴を保存する構造
+if (!data.stockHistory) data.stockHistory = {}; // { companyName: [価格, 価格, ...] }
+
+function recordStockPrice(company, price) {
+  if (!data.stockHistory[company]) data.stockHistory[company] = [];
+  data.stockHistory[company].push(price);
+
+  // 履歴が100件を超えたら古いものを削除
+  if (data.stockHistory[company].length > 100) {
+    data.stockHistory[company].shift();
+  }
+  saveData();
+}
+
+//==============================
+// 💬 /stockgraph コマンド登録
+//==============================
+commands.push(
+  new SlashCommandBuilder()
+    .setName("stockgraph")
+    .setDescription("指定した会社の株価履歴グラフを表示します。")
+    .addStringOption(o =>
+      o.setName("company").setDescription("会社名").setRequired(true)
+    )
+);
+
+//==============================
+// 📊 グラフ生成関数
+//==============================
+async function generateStockGraph(company) {
+  const prices = data.stockHistory[company];
+  if (!prices || prices.length < 2) return null;
+
+  const width = 800;
+  const height = 400;
+  const canvas = createCanvas(width, height);
+  const ctx = canvas.getContext("2d");
+
+  // 背景
+  ctx.fillStyle = "#202225";
+  ctx.fillRect(0, 0, width, height);
+
+  // 枠線
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(40, 20, width - 60, height - 60);
+
+  // スケール
+  const max = Math.max(...prices);
+  const min = Math.min(...prices);
+  const range = max - min || 1;
+
+  // 折れ線グラフ
+  ctx.beginPath();
+  ctx.strokeStyle = "#00ff88";
+  ctx.lineWidth = 3;
+
+  prices.forEach((p, i) => {
+    const x = 40 + (i / (prices.length - 1)) * (width - 80);
+    const y = height - 40 - ((p - min) / range) * (height - 80);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // テキスト
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "20px Sans";
+  ctx.fillText(`📈 ${company} 株価履歴`, 50, 40);
+  ctx.fillText(`最新価格: ${prices[prices.length - 1]}`, 50, height - 15);
+
+  return new AttachmentBuilder(canvas.toBuffer(), { name: `${company}_graph.png` });
+}
+
+//==============================
+// 🎮 コマンド処理追加
+//==============================
+client.on("interactionCreate", async i => {
+  if (!i.isChatInputCommand()) return;
+
+  if (i.commandName === "stockgraph") {
+    const company = i.options.getString("company");
+
+    if (!data.stocks || !data.stocks[company]) {
+      return i.reply("❌ その会社は存在しません。");
+    }
+
+    const graph = await generateStockGraph(company);
+    if (!graph) {
+      return i.reply("📉 株価履歴が少なすぎます。もう少し経過を待ってください。");
+    }
+
+    return i.reply({ content: `📊 ${company} の株価推移です。`, files: [graph] });
+  }
+});
 
 //==============================
 // 🔑 ログイン
