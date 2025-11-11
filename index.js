@@ -415,5 +415,229 @@ client.on("interactionCreate", async i => {
     );
   }
 });
+// 📁 Part4.js
+// 自動経済・株価・利息・配当・ロール収入・通知機能
+
+const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
+const fs = require("fs");
+const path = require("path");
+
+const economyPath = path.join(__dirname, "economy.json");
+if (!fs.existsSync(economyPath)) fs.writeFileSync(economyPath, JSON.stringify({ users: {}, settings: {}, stocks: {}, loans: {} }, null, 2));
+
+const data = JSON.parse(fs.readFileSync(economyPath, "utf8"));
+
+function saveData() {
+  fs.writeFileSync(economyPath, JSON.stringify(data, null, 2));
+}
+
+// ────────────────────────────────
+// デフォルト設定
+if (!data.settings.bank) {
+  data.settings.bank = { interestRate: 1 }; // 月利1%
+}
+if (!data.settings.stock) {
+  data.settings.stock = {
+    interestRate: 1, // 同じく1%
+    fluctuationHours: 6, // 6時間ごと変動
+    notifyChannel: null,
+  };
+}
+if (!data.settings.roles) data.settings.roles = []; // { roleId, income, hours: [0,12,18] }
+if (!data.settings.currency) data.settings.currency = { name: "コイン", emoji: "💰" };
+saveData();
+
+// ────────────────────────────────
+// /set_bank_interest
+const setBankInterest = new SlashCommandBuilder()
+  .setName("set_bank_interest")
+  .setDescription("🏦 銀行利率を設定します（%/月）")
+  .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+  .addNumberOption(o => o.setName("rate").setDescription("金利（例: 1）").setRequired(true));
+
+// /set_stock_interest
+const setStockInterest = new SlashCommandBuilder()
+  .setName("set_stock_interest")
+  .setDescription("📈 株の配当利率を設定します（%/月）")
+  .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+  .addNumberOption(o => o.setName("rate").setDescription("金利（例: 1）").setRequired(true));
+
+// /set_stock_channel
+const setStockChannel = new SlashCommandBuilder()
+  .setName("set_stock_channel")
+  .setDescription("📊 株価変動通知チャンネルを設定します")
+  .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+  .addChannelOption(o => o.setName("channel").setDescription("通知チャンネル").setRequired(true));
+
+// /set_currency
+const setCurrency = new SlashCommandBuilder()
+  .setName("set_currency")
+  .setDescription("💱 通貨名と絵文字を設定します")
+  .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+  .addStringOption(o => o.setName("name").setDescription("通貨名（例: ゴールド）").setRequired(true))
+  .addStringOption(o => o.setName("emoji").setDescription("通貨絵文字（例: 💰）"));
+
+// /add_role_income
+const addRoleIncome = new SlashCommandBuilder()
+  .setName("add_role_income")
+  .setDescription("👔 ロール収入を追加します（自動付与機能）")
+  .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+  .addRoleOption(o => o.setName("role").setDescription("対象ロール").setRequired(true))
+  .addIntegerOption(o => o.setName("amount").setDescription("収入金額").setRequired(true))
+  .addStringOption(o => o.setName("hours").setDescription("付与時間（例: 0|12|18）"));
+
+// /reset_economy
+const resetEconomy = new SlashCommandBuilder()
+  .setName("reset_economy")
+  .setDescription("🔁 経済データを初期化します（すべてデフォルト）")
+  .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
+
+// /start_economy
+const startEconomy = new SlashCommandBuilder()
+  .setName("start_economy")
+  .setDescription("🚀 設定した値で経済システムを開始します")
+  .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
+
+// ────────────────────────────────
+// コマンド登録
+module.exports.commands = [
+  setBankInterest,
+  setStockInterest,
+  setStockChannel,
+  setCurrency,
+  addRoleIncome,
+  resetEconomy,
+  startEconomy,
+];
+
+// ────────────────────────────────
+// 株価変動ロジック
+function fluctuateStocks(client) {
+  if (!data.stocks || Object.keys(data.stocks).length === 0) return;
+
+  for (const [symbol, stock] of Object.entries(data.stocks)) {
+    const change = (Math.random() * 10 - 5).toFixed(2); // -5% ～ +5%
+    const newPrice = Math.max(1, stock.price * (1 + change / 100));
+    stock.price = parseFloat(newPrice.toFixed(2));
+
+    // 配当：株数 × 株価 × 配当利率
+    const dividendRate = data.settings.stock.interestRate / 100;
+    for (const [uid, user] of Object.entries(data.users)) {
+      if (user.stocks?.[symbol]) {
+        const dividend = Math.floor(user.stocks[symbol] * stock.price * dividendRate);
+        user.money += dividend;
+      }
+    }
+  }
+
+  saveData();
+
+  if (data.settings.stock.notifyChannel) {
+    const channel = client.channels.cache.get(data.settings.stock.notifyChannel);
+    if (channel) {
+      channel.send("📈 株価が変動しました！（配当も支給されました）");
+    }
+  }
+}
+
+// ────────────────────────────────
+// 銀行利息（毎月1日自動付与）
+function applyBankInterest() {
+  for (const [uid, user] of Object.entries(data.users)) {
+    const rate = data.settings.bank.interestRate / 100;
+    const interest = Math.floor(user.bank * rate);
+    user.bank += interest;
+  }
+  saveData();
+}
+
+// ────────────────────────────────
+// ロール収入（複数時刻対応）
+async function giveRoleIncome(client) {
+  for (const guild of client.guilds.cache.values()) {
+    const settings = data.settings.roles.filter(r => guild.roles.cache.has(r.roleId));
+    for (const r of settings) {
+      const role = guild.roles.cache.get(r.roleId);
+      if (!role) continue;
+      for (const member of role.members.values()) {
+        if (!data.users[member.id]) data.users[member.id] = { money: 0, bank: 0, xp: 0, vxp: 0, stocks: {} };
+        data.users[member.id].money += r.amount;
+      }
+    }
+  }
+  saveData();
+}
+
+// ────────────────────────────────
+// 実行処理
+module.exports.execute = async (interaction, client) => {
+  const name = interaction.commandName;
+
+  if (name === "set_bank_interest") {
+    data.settings.bank.interestRate = interaction.options.getNumber("rate");
+    saveData();
+    return interaction.reply(`🏦 銀行金利を ${data.settings.bank.interestRate}% に設定しました。`);
+  }
+
+  if (name === "set_stock_interest") {
+    data.settings.stock.interestRate = interaction.options.getNumber("rate");
+    saveData();
+    return interaction.reply(`📈 株の配当利率を ${data.settings.stock.interestRate}% に設定しました。`);
+  }
+
+  if (name === "set_stock_channel") {
+    const channel = interaction.options.getChannel("channel");
+    data.settings.stock.notifyChannel = channel.id;
+    saveData();
+    return interaction.reply(`📊 株価変動通知チャンネルを <#${channel.id}> に設定しました。`);
+  }
+
+  if (name === "set_currency") {
+    const n = interaction.options.getString("name");
+    const e = interaction.options.getString("emoji");
+    data.settings.currency = { name: n, emoji: e };
+    saveData();
+    return interaction.reply(`💱 通貨を ${e} ${n} に設定しました！`);
+  }
+
+  if (name === "add_role_income") {
+    const role = interaction.options.getRole("role");
+    const amount = interaction.options.getInteger("amount");
+    const hours = interaction.options.getString("hours")?.split("|").map(h => parseInt(h)) || [0];
+    data.settings.roles.push({ roleId: role.id, amount, hours });
+    saveData();
+    return interaction.reply(`👔 ロール ${role.name} に収入 ${amount}${data.settings.currency.emoji} を追加しました。`);
+  }
+
+  if (name === "reset_economy") {
+    Object.keys(data.users).forEach(k => delete data.users[k]);
+    data.settings = {
+      bank: { interestRate: 1 },
+      stock: { interestRate: 1, fluctuationHours: 6, notifyChannel: null },
+      roles: [],
+      currency: { name: "コイン", emoji: "💰" },
+    };
+    saveData();
+    return interaction.reply("🔁 経済データを初期化しました。");
+  }
+
+  if (name === "start_economy") {
+    interaction.reply("🚀 経済システムを開始しました。");
+
+    // 1日1回 銀行利息
+    setInterval(applyBankInterest, 1000 * 60 * 60 * 24 * 30);
+
+    // 株価変動
+    setInterval(() => fluctuateStocks(client), 1000 * 60 * 60 * data.settings.stock.fluctuationHours);
+
+    // ロール収入
+    setInterval(async () => {
+      const now = new Date();
+      const hour = now.getHours();
+      const validRoles = data.settings.roles.filter(r => r.hours.includes(hour));
+      if (validRoles.length > 0) await giveRoleIncome(client);
+    }, 1000 * 60 * 60);
+  }
+};
 
 client.login(TOKEN);
