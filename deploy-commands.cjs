@@ -4,10 +4,12 @@ const fs = require("fs");
 const path = require("path");
 require("dotenv").config();
 
+// ← この下に追加！
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
+// 🔍 デバッグ出力（ここが追加部分！）
 console.log("TOKEN:", process.env.TOKEN);
 console.log("CLIENT_ID:", process.env.CLIENT_ID);
 console.log("GUILD_ID:", process.env.GUILD_ID);
