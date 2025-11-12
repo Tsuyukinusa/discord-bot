@@ -8,6 +8,10 @@ const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
+console.log("TOKEN:", process.env.TOKEN);
+console.log("CLIENT_ID:", process.env.CLIENT_ID);
+console.log("GUILD_ID:", process.env.GUILD_ID);
+
 if (!TOKEN || !CLIENT_ID || !GUILD_ID) {
   console.error("❌ TOKEN / CLIENT_ID / GUILD_ID が未設定です。");
   process.exit(1);
