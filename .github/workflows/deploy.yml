@@ -6,6 +6,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -13,14 +14,14 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: '.nvmrc'  # ← .nvmrcがあればこれでOK
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci  # より安定した依存関係インストール
 
       - name: Deploy slash commands
         env:
           TOKEN: ${{ secrets.TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
-          GUILD_ID: ${{ secrets.GUILD_ID }}
         run: node deploy-commands.js
