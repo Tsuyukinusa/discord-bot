@@ -1,11 +1,3 @@
-これで自動的に「commands」フォルダの中に「work.js」ってファイルが作られるようになります。
-
----
-
-### 🪄 ステップ2：コードを貼る
-開いた編集画面に、次のコードをそのままコピペ👇
-
-```js
 import { SlashCommandBuilder } from "discord.js";
 
 export default {
