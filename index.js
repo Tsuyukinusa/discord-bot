@@ -1,4 +1,3 @@
-// index.js
 import "dotenv/config";
 import {
   Client,
@@ -21,7 +20,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildVoiceStates,   // ← VXP（VC用）で必須
+    GatewayIntentBits.GuildVoiceStates,
   ],
   partials: [Partials.Channel, Partials.Message],
 });
