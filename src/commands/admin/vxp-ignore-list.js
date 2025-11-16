@@ -9,7 +9,6 @@ export default {
 
   async execute(interaction) {
     const guildId = interaction.guild.id;
-
     const guildDB = await readGuildDB();
     const list = guildDB[guildId]?.vxpIgnoreChannels || [];
 
