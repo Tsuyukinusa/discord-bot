@@ -1,15 +1,25 @@
+// src/events/ready.js
+
+import rankSelectHandler from "../selects/rankSelect.js"; // ← セレクトメニューのファイル
+
 export default {
   name: "ready",
   once: true,
   execute(client) {
     console.log(`✅ ログインしました: ${client.user.tag}`);
 
-    // Botのステータス設定
+    // ====== セレクトメニューのハンドラーマップ作成 ======
+    client.selectHandlers = new Map();
+
+    // ====== rank のセレクトメニューを登録 ======
+    client.selectHandlers.set("rank-select", rankSelectHandler);
+
+    // ====== ステータス設定 ======
     client.user.setPresence({
       activities: [
         {
           name: "経済 & カジノ & レベリング",
-          type: 0, // 0 = PLAYING
+          type: 0,
         },
       ],
       status: "online",
