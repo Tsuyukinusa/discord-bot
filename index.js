@@ -1,3 +1,4 @@
+// index.js
 import "dotenv/config";
 import {
   Client,
