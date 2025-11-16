@@ -1,11 +1,9 @@
-// src/utils/file.js
 import fs from "fs";
 import path from "path";
 
-// ===== Guild DB =====
+// Guild DB
 const guildDBPath = path.join(process.cwd(), "database", "guilds.json");
 
-// ギルドDBを読み込み
 export async function readGuildDB() {
   if (!fs.existsSync(guildDBPath)) {
     fs.writeFileSync(guildDBPath, JSON.stringify({}));
@@ -14,12 +12,11 @@ export async function readGuildDB() {
   return JSON.parse(raw);
 }
 
-// ギルドDBを書き込み
 export async function writeGuildDB(data) {
   fs.writeFileSync(guildDBPath, JSON.stringify(data, null, 2));
 }
 
-// ===== User DB =====
+// User DB
 const userDBPath = path.join(process.cwd(), "database", "users");
 
 if (!fs.existsSync(userDBPath)) {
