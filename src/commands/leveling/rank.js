@@ -1,4 +1,5 @@
 // src/commands/leveling/rank.js
+
 import {
   SlashCommandBuilder,
   ActionRowBuilder,
@@ -8,34 +9,37 @@ import {
 export default {
   data: new SlashCommandBuilder()
     .setName("rank")
-    .setDescription("XP / VXP のランキング、またはプロフィールを表示します"),
+    .setDescription("ランキングメニューを表示します"),
 
   async execute(interaction) {
 
     const menu = new StringSelectMenuBuilder()
-      .setCustomId("rank-select")
-      .setPlaceholder("表示するものを選んでください")
+      .setCustomId("rank-select") // ← ready.js のハンドラと一致！
+      .setPlaceholder("表示するランキングを選択…")
       .addOptions([
         {
           label: "🏆 XP ランキング",
           value: "xp",
+          description: "サーバー内の XP ランキングを表示",
         },
         {
           label: "🎤 VXP ランキング",
           value: "vxp",
+          description: "通話ポイント（VXP）のランキング",
         },
         {
-          label: "👤 プロフィールを表示",
+          label: "🪪 プロフィールを見る",
           value: "profile",
+          description: "自分のプロフィールカードを表示",
         },
       ]);
 
     const row = new ActionRowBuilder().addComponents(menu);
 
     await interaction.reply({
-      content: "表示したい項目を選んでください！",
+      content: "📊 表示する項目を選んでください！",
       components: [row],
-      ephemeral: false,
+      ephemeral: true,
     });
   },
 };
