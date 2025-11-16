@@ -1,4 +1,3 @@
-// src/commands/leveling/me.js
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { getUserLevel } from "../../services/levelingService.js";
 
@@ -21,27 +20,15 @@ export default {
     }
 
     const { xp, level, vxp, vlevel } = data;
-
     const nextXP = level * 100;
     const nextVXP = vlevel * 100;
 
     const embed = new EmbedBuilder()
       .setColor(0x00aaff)
-      .setAuthor({
-        name: `${interaction.user.username} さんのステータス`,
-        iconURL: interaction.user.displayAvatarURL(),
-      })
+      .setAuthor({ name: `${interaction.user.username} さんのステータス`, iconURL: interaction.user.displayAvatarURL() })
       .addFields(
-        {
-          name: "📘 テキストレベル",
-          value: `Level: **${level}**\nXP: **${xp} / ${nextXP}**`,
-          inline: true,
-        },
-        {
-          name: "🎤 ボイスレベル",
-          value: `VLevel: **${vlevel}**\nVXP: **${vxp} / ${nextVXP}**`,
-          inline: true,
-        }
+        { name: "📘 テキストレベル", value: `Level: **${level}**\nXP: **${xp} / ${nextXP}**`, inline: true },
+        { name: "🎤 ボイスレベル", value: `VLevel: **${vlevel}**\nVXP: **${vxp} / ${nextVXP}**`, inline: true }
       )
       .setTimestamp();
 
