@@ -7,11 +7,13 @@ export default async function rankSelectHandler(interaction) {
   const value = interaction.values[0];
   const guildId = interaction.guild.id;
 
-  // ===== XP ランキング =====
-  if (value === "xp") {
-    const db = await readGuildDB();
-    const users = db[guildId]?.users || {};
+  const db = await readGuildDB();
+  const users = db[guildId]?.users || {};
 
+  /* ============================
+      XP ランキング
+  ============================ */
+  if (value === "xp") {
     const sorted = Object.entries(users)
       .sort((a, b) => b[1].xp - a[1].xp)
       .slice(0, 10);
@@ -27,14 +29,16 @@ export default async function rankSelectHandler(interaction) {
 
     embed.setDescription(rankText || "データがありません");
 
-    return interaction.update({ embeds: [embed], components: [] });
+    return interaction.update({
+      embeds: [embed],
+      components: [],
+    });
   }
 
-  // ===== VXP ランキング =====
+  /* ============================
+      VXP ランキング
+  ============================ */
   if (value === "vxp") {
-    const db = await readGuildDB();
-    const users = db[guildId]?.users || {};
-
     const sorted = Object.entries(users)
       .sort((a, b) => b[1].vxp - a[1].vxp)
       .slice(0, 10);
@@ -50,10 +54,15 @@ export default async function rankSelectHandler(interaction) {
 
     embed.setDescription(rankText || "データがありません");
 
-    return interaction.update({ embeds: [embed], components: [] });
+    return interaction.update({
+      embeds: [embed],
+      components: [],
+    });
   }
 
-  // ===== プロフィール表示 =====
+  /* ============================
+      プロフィールカード
+  ============================ */
   if (value === "profile") {
     await interaction.deferUpdate();
 
@@ -66,6 +75,9 @@ export default async function rankSelectHandler(interaction) {
       name: "profile.png",
     });
 
-    return interaction.editReply({ files: [attachment], components: [] });
+    return interaction.editReply({
+      files: [attachment],
+      components: [],
+    });
   }
 }
