@@ -8,23 +8,24 @@ import {
 export default {
   data: new SlashCommandBuilder()
     .setName("rank")
-    .setDescription("XP / VXP / プロフィール を選択して表示"),
+    .setDescription("XP / VXP のランキング、またはプロフィールを表示します"),
 
   async execute(interaction) {
+
     const menu = new StringSelectMenuBuilder()
       .setCustomId("rank-select")
-      .setPlaceholder("表示したい内容を選んでください")
+      .setPlaceholder("表示するものを選んでください")
       .addOptions([
         {
-          label: "XP ランキング",
+          label: "🏆 XP ランキング",
           value: "xp",
         },
         {
-          label: "VXP ランキング",
+          label: "🎤 VXP ランキング",
           value: "vxp",
         },
         {
-          label: "プロフィールを見る",
+          label: "👤 プロフィールを表示",
           value: "profile",
         },
       ]);
@@ -32,8 +33,9 @@ export default {
     const row = new ActionRowBuilder().addComponents(menu);
 
     await interaction.reply({
-      content: "表示するデータを選んでください！",
+      content: "表示したい項目を選んでください！",
       components: [row],
+      ephemeral: false,
     });
   },
 };
