@@ -1,6 +1,5 @@
-// src/commands/leveling/reset-background.js
 import { SlashCommandBuilder } from "discord.js";
-import { readUserDB, writeUserDB } from "../../utils/userDB.js";
+import { readUserDB, writeUserDB } from "../../utils/file.js";
 
 export default {
   data: new SlashCommandBuilder()
@@ -9,11 +8,9 @@ export default {
 
   async execute(interaction) {
     const userId = interaction.user.id;
-
     const userDB = await readUserDB(userId);
 
-    userDB.background = null; // デフォルトに戻す
-
+    userDB.background = null;
     await writeUserDB(userId, userDB);
 
     await interaction.reply({
