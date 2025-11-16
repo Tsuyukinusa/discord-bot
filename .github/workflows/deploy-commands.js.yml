@@ -22,7 +22,7 @@ jobs:
         run: npm install
 
       - name: Deploy Slash Commands
-        run: node src/deploy-commands.js
+        run: node deploy-commands.js
         env:
           DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
