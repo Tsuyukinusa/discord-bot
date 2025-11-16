@@ -8,8 +8,10 @@ import "dotenv/config";
 const clientId = process.env.CLIENT_ID;
 const token = process.env.TOKEN;
 
-// ===== すべてのコマンドを読み込む関数 =====
-function loadCommands(dir) {
+// ===========================================
+// 📌 すべてのコマンドを読み込む関数
+// ===========================================
+async function loadCommands(dir) {
   let commands = [];
 
   const files = fs.readdirSync(dir, { withFileTypes: true });
@@ -19,18 +21,25 @@ function loadCommands(dir) {
 
     if (file.isDirectory()) {
       // 再帰的に読む
-      commands = commands.concat(loadCommands(fullPath));
+      const subCommands = await loadCommands(fullPath);
+      commands = commands.concat(subCommands);
+
     } else if (file.name.endsWith(".js")) {
-      const command = await import(fullPath);
-      if (command.default?.data) {
-        commands.push(command.default.data.toJSON());
+      const commandModule = await import(fullPath);
+      const command = commandModule.default;
+
+      if (command?.data) {
+        commands.push(command.data.toJSON());
       }
     }
   }
+
   return commands;
 }
 
-// ===== ここで src/commands を全部ロード =====
+// ===========================================
+// 📌 コマンド読込
+// ===========================================
 const commandsPath = path.join(process.cwd(), "src", "commands");
 const commands = await loadCommands(commandsPath);
 
@@ -38,7 +47,9 @@ console.log(`📦 読み込んだコマンド数: ${commands.length}`);
 
 const rest = new REST({ version: "10" }).setToken(token);
 
-// ===== 登録処理 =====
+// ===========================================
+// 📌 Discord へ登録
+// ===========================================
 try {
   console.log("🚀 Discord にコマンドを登録中...");
 
