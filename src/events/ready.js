@@ -11,8 +11,15 @@ export default {
     // ====== セレクトメニューのハンドラーマップ作成 ======
     client.selectHandlers = new Map();
 
+    // ====== ボタンのハンドラーマップ作成 ======
+    client.buttonHandlers = new Map();
+
     // ====== rank のセレクトメニューを登録 ======
     client.selectHandlers.set("rank-select", rankSelectHandler);
+
+    // ====== rank のボタンを登録 ======
+    client.buttonHandlers.set("rank:prev", rankSelectHandler);
+    client.buttonHandlers.set("rank:next", rankSelectHandler);
 
     // ====== ステータス設定 ======
     client.user.setPresence({
