@@ -1,7 +1,6 @@
 import {
   SlashCommandBuilder,
   PermissionFlagsBits,
-  ChannelType,
 } from "discord.js";
 import { readGuildDB, writeGuildDB } from "../../utils/file.js";
 
@@ -26,52 +25,33 @@ export default {
     const channelId = interaction.channel.id;
 
     const db = await readGuildDB();
-
     if (!db[guildId]) db[guildId] = {};
-    if (!db[guildId].xpIgnoreChannels)
-      db[guildId].xpIgnoreChannels = [];
-
+    if (!db[guildId].xpIgnoreChannels) db[guildId].xpIgnoreChannels = [];
     const arr = db[guildId].xpIgnoreChannels;
 
-    // --------------------------
-    // /xp-ignore add
-    // --------------------------
     if (sub === "add") {
       if (!arr.includes(channelId)) {
         arr.push(channelId);
         await writeGuildDB(db);
       }
-      return interaction.reply(
-        `🚫 このチャンネルは **XP除外** に設定されました！`
-      );
+      return interaction.reply(`🚫 このチャンネルは **XP除外** に設定されました！`);
     }
 
-    // --------------------------
-    // /xp-ignore remove
-    // --------------------------
     if (sub === "remove") {
       const i = arr.indexOf(channelId);
       if (i !== -1) {
         arr.splice(i, 1);
         await writeGuildDB(db);
       }
-      return interaction.reply(
-        `✅ このチャンネルは **XP除外解除** されました！`
-      );
+      return interaction.reply(`✅ このチャンネルは **XP除外解除** されました！`);
     }
 
-    // --------------------------
-    // /xp-ignore list
-    // --------------------------
     if (sub === "list") {
       if (arr.length === 0) {
         return interaction.reply("📭 **XP除外チャンネルはありません！**");
       }
 
-      const channelList = arr
-        .map((id) => `<#${id}>`)
-        .join("\n");
-
+      const channelList = arr.map((id) => `<#${id}>`).join("\n");
       return interaction.reply({
         content: `📌 **XP が加算されないチャンネル一覧：**\n${channelList}`,
         ephemeral: false,
