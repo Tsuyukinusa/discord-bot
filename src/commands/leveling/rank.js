@@ -3,19 +3,17 @@ import {
   SlashCommandBuilder,
   ActionRowBuilder,
   StringSelectMenuBuilder,
-  EmbedBuilder,
 } from "discord.js";
-import { readGuildDB } from "../../utils/file.js";
 
 export default {
   data: new SlashCommandBuilder()
     .setName("rank")
-    .setDescription("XP または VXP のランキングを表示します"),
+    .setDescription("XP / VXP / プロフィール を選択して表示"),
 
   async execute(interaction) {
     const menu = new StringSelectMenuBuilder()
       .setCustomId("rank-select")
-      .setPlaceholder("ランキングの種類を選択")
+      .setPlaceholder("表示したい内容を選んでください")
       .addOptions([
         {
           label: "XP ランキング",
@@ -25,14 +23,17 @@ export default {
           label: "VXP ランキング",
           value: "vxp",
         },
+        {
+          label: "プロフィールを見る",
+          value: "profile",
+        },
       ]);
 
     const row = new ActionRowBuilder().addComponents(menu);
 
     await interaction.reply({
-      content: "表示したいランキングを選んでください！",
+      content: "表示するデータを選んでください！",
       components: [row],
-      ephemeral: false,
     });
   },
 };
