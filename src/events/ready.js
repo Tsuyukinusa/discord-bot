@@ -1,6 +1,6 @@
 // src/events/ready.js
 
-import rankSelectHandler from "../selects/rankSelect.js"; // ← セレクトメニューのファイル
+import rankSelectHandler from "../selects/rankSelect.js"; // ランキングのセレクト/ボタン両対応 handler
 
 export default {
   name: "ready",
@@ -8,18 +8,18 @@ export default {
   execute(client) {
     console.log(`✅ ログインしました: ${client.user.tag}`);
 
-    // ====== セレクトメニューのハンドラーマップ作成 ======
+    // ====== セレクトメニューのハンドラーマップ ======
     client.selectHandlers = new Map();
 
-    // ====== ボタンのハンドラーマップ作成 ======
-    client.buttonHandlers = new Map();
-
-    // ====== rank のセレクトメニューを登録 ======
+    // /rank のセレクトメニュー（XP / VXP / Profile）
     client.selectHandlers.set("rank-select", rankSelectHandler);
 
-    // ====== rank のボタンを登録 ======
-    client.buttonHandlers.set("rank:prev", rankSelectHandler);
-    client.buttonHandlers.set("rank:next", rankSelectHandler);
+    // ====== ボタンのハンドラーマップ ======
+    client.buttonHandlers = new Map();
+
+    // ランキングページングボタン（prev / next）
+    // customId は "rank:prev:xp:1" など → 前半の "rank" で一致する
+    client.buttonHandlers.set("rank", rankSelectHandler);
 
     // ====== ステータス設定 ======
     client.user.setPresence({
