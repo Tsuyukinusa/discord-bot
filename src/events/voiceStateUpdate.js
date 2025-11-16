@@ -4,6 +4,7 @@ import { readGuildDB, writeGuildDB } from "../utils/file.js";
 
 export default {
   name: "voiceStateUpdate",
+
   async execute(oldState, newState) {
     const member = newState.member;
     if (!member || member.user.bot) return;
@@ -11,50 +12,78 @@ export default {
     const guildId = member.guild.id;
     const userId = member.user.id;
 
-    // ========= Guild DB 読み込み =========
+    // ====== データ読み込み ======
     const guildData = await readGuildDB();
     guildData[guildId] ||= {};
-    guildData[guildId].voiceSession ||= {}; // VC滞在記録
+    guildData[guildId].voiceSession ||= {};
 
     const session = guildData[guildId].voiceSession;
-
-    // ========= 除外VCチャンネル取得 =========
     const ignored = guildData[guildId].vxpIgnoreChannels || [];
 
-    // ======== VC 入室時 ========
-    if (!oldState.channelId && newState.channelId) {
+    const oldChannel = oldState.channelId;
+    const newChannel = newState.channelId;
 
-      // 除外VCなら記録しない
-      if (ignored.includes(newState.channelId)) return;
+    // ========= ユーザーの記録を取得 =========
+    let record = session[userId];
+
+    // ========= VC退出時（oldあり newなし）=========
+    if (oldChannel && !newChannel) {
+      if (record) {
+        const stayMs = Date.now() - record.joinedAt;
+        const staySec = Math.floor(stayMs / 1000);
+
+        if (!ignored.includes(record.channelId)) {
+          const gain = Math.floor(staySec / 60); // 1分=1VXP
+          if (gain > 0) await addVXP(guildId, userId, gain);
+        }
+
+        delete session[userId];
+        await writeGuildDB(guildData);
+      }
+      return;
+    }
+
+    // ========= VC入室時（oldなし newあり）=========
+    if (!oldChannel && newChannel) {
+      if (ignored.includes(newChannel)) return;
 
       session[userId] = {
         joinedAt: Date.now(),
-        channelId: newState.channelId,
+        channelId: newChannel,
       };
 
       await writeGuildDB(guildData);
       return;
     }
 
-    // ======== VC 退出時 ========
-    if (oldState.channelId && !newState.channelId) {
+    // ========= VC移動時（oldあり newあり）=========
+    if (oldChannel && newChannel && oldChannel !== newChannel) {
+      // 1️⃣ 移動前のチャンネルで加算処理
+      if (record) {
+        const stayMs = Date.now() - record.joinedAt;
+        const staySec = Math.floor(stayMs / 1000);
 
-      const record = session[userId];
-      if (!record) return;
-
-      const stayMs = Date.now() - record.joinedAt;
-      const staySec = Math.floor(stayMs / 1000);
-
-      // 除外VCならVxp付与しない
-      if (!ignored.includes(record.channelId)) {
-        const gain = Math.floor(staySec / 60); // 1分＝1Vxp
-        if (gain > 0) {
-          await addVXP(guildId, userId, gain);
+        if (!ignored.includes(record.channelId)) {
+          const gain = Math.floor(staySec / 60);
+          if (gain > 0) await addVXP(guildId, userId, gain);
         }
       }
 
-      delete session[userId];
+      // 2️⃣ 新しいチャンネルが除外なら記録削除
+      if (ignored.includes(newChannel)) {
+        delete session[userId];
+        await writeGuildDB(guildData);
+        return;
+      }
+
+      // 3️⃣ 新チャンネルに joinedAt をリセット
+      session[userId] = {
+        joinedAt: Date.now(),
+        channelId: newChannel,
+      };
+
       await writeGuildDB(guildData);
+      return;
     }
   },
 };
