@@ -1,28 +1,32 @@
-name: Deploy Discord Commands
+name: Test Deploy Commands
 
+# push したとき or 手動実行で動作
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
-  deploy:
+  deploy-commands:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      # リポジトリをチェックアウト
+      - uses: actions/checkout@v3
 
-      - name: Set up Node.js
+      # Node.js 環境をセットアップ
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: '18'
 
+      # 依存パッケージをインストール
       - name: Install dependencies
         run: npm install
 
-      - name: Deploy Slash Commands
-        run: node deploy-commands.js
+      # コマンド登録スクリプトを実行
+      - name: Deploy commands
         env:
-          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          TOKEN: ${{ secrets.TOKEN }}
+        run: node src/deploy-commands.js
