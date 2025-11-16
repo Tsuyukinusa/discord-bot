@@ -1,94 +1,60 @@
-// src/selects/rankSelect.js
 import { readGuildDB } from "../utils/file.js";
-import { createProfileCard } from "../services/profileService.js";
-import {
-  AttachmentBuilder,
-  EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-} from "discord.js";
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 export default async function rankSelectHandler(interaction) {
-  const value = interaction.values[0];
+  const value = interaction.values?.[0] || interaction.customId.split(":")[1];
+  const page = parseInt(interaction.customId?.split(":")[2] || "1");
   const guildId = interaction.guild.id;
 
-  // ===========================================
-  // 🏆 XP ランキング
-  // ===========================================
-  if (value === "xp") {
-    const db = await readGuildDB();
-    const users = db[guildId]?.users || {};
+  const db = await readGuildDB();
+  const users = db[guildId]?.users || {};
 
-    const sorted = Object.entries(users)
-      .sort((a, b) => b[1].xp - a[1].xp)
-      .slice(0, 10);
+  // === ランキング対象キー ===
+  const key = value === "vxp" ? "vxp" : "xp"; // デフォルト xp
 
-    const embed = new EmbedBuilder()
-      .setTitle("🏆 XP ランキング TOP10")
-      .setColor("#00bfff");
+  // === ソート & 分割 ===
+  const sorted = Object.entries(users)
+    .sort((a, b) => b[1][key] - a[1][key]);
 
-    let text = "";
-    sorted.forEach(([uid, data], i) => {
-      text += `**${i + 1}. <@${uid}>** - XP: ${data.xp}\n`;
-    });
+  const pageSize = 10;
+  const totalPage = Math.max(1, Math.ceil(sorted.length / pageSize));
 
-    embed.setDescription(text || "データがありません");
+  const start = (page - 1) * pageSize;
+  const pageUsers = sorted.slice(start, start + pageSize);
 
-    return interaction.update({ embeds: [embed], components: [] });
+  // === Embed 作成 ===
+  const embed = new EmbedBuilder()
+    .setTitle(key === "xp" ? "🏆 XP ランキング" : "🎤 VXP ランキング")
+    .setColor("#00aaff")
+    .setFooter({ text: `ページ ${page} / ${totalPage}` });
+
+  let desc = "";
+  pageUsers.forEach(([uid, data], i) => {
+    const rank = start + i + 1;
+    desc += `**${rank}. <@${uid}>** — ${key.toUpperCase()}: ${data[key]}\n`;
+  });
+  embed.setDescription(desc || "データがありません");
+
+  // === ページボタン ===
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`rank:prev:${value}:${page}`)
+      .setLabel("◀")
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(page === 1),
+
+    new ButtonBuilder()
+      .setCustomId(`rank:next:${value}:${page}`)
+      .setLabel("▶")
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(page === totalPage)
+  );
+
+  if (interaction.isStringSelectMenu()) {
+    return interaction.update({ embeds: [embed], components: [row] });
   }
 
-  // ===========================================
-  // 🎤 VXP ランキング
-  // ===========================================
-  if (value === "vxp") {
-    const db = await readGuildDB();
-    const users = db[guildId]?.users || {};
-
-    const sorted = Object.entries(users)
-      .sort((a, b) => b[1].vxp - a[1].vxp)
-      .slice(0, 10);
-
-    const embed = new EmbedBuilder()
-      .setTitle("🎤 VXP ランキング TOP10")
-      .setColor("#ff7f50");
-
-    let text = "";
-    sorted.forEach(([uid, data], i) => {
-      text += `**${i + 1}. <@${uid}>** - VXP: ${data.vxp}\n`;
-    });
-
-    embed.setDescription(text || "データがありません");
-
-    return interaction.update({ embeds: [embed], components: [] });
-  }
-
-  // ===========================================
-  // 🧑 プロフィール表示 +（B & C対応）背景変更ボタン付き
-  // ===========================================
-  if (value === "profile") {
-    await interaction.deferUpdate();
-
-    const buf = await createProfileCard(guildId, interaction.user);
-
-    const card = new AttachmentBuilder(buf, { name: "profile.png" });
-
-    // ====== B & C：背景を変更・リセットするボタン ======
-    const btns = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("set-bg")
-        .setLabel("背景を変更")
-        .setStyle(ButtonStyle.Primary),
-
-      new ButtonBuilder()
-        .setCustomId("reset-bg")
-        .setLabel("背景をリセット")
-        .setStyle(ButtonStyle.Danger)
-    );
-
-    return interaction.editReply({
-      files: [card],
-      components: [btns],
-    });
+  if (interaction.isButton()) {
+    return interaction.update({ embeds: [embed], components: [row] });
   }
 }
