@@ -1,8 +1,4 @@
-import {
-  SlashCommandBuilder,
-  ActionRowBuilder,
-  StringSelectMenuBuilder,
-} from "discord.js";
+import { SlashCommandBuilder, ActionRowBuilder, StringSelectMenuBuilder } from "discord.js";
 
 export default {
   data: new SlashCommandBuilder()
