@@ -20,6 +20,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates,   // ← VXP（VC用）で必須
   ],
   partials: [Partials.Channel, Partials.Message],
 });
@@ -39,4 +40,36 @@ for (const folder of commandFolders) {
 
   for (const file of commandFiles) {
     const filePath = path.join(folderPath, file);
-    const command = (await import(filePath)).default
+    const command = (await import(filePath)).default;
+
+    if (!command?.data || !command?.execute) {
+      console.warn(`❌ コマンドが正しく export されていません: ${file}`);
+      continue;
+    }
+
+    client.commands.set(command.data.name, command);
+    console.log(`✔ Loaded command: ${command.data.name}`);
+  }
+}
+
+// ▼ events を読み込み
+const eventsPath = path.join(__dirname, "src/events");
+const eventFiles = fs
+  .readdirSync(eventsPath)
+  .filter((file) => file.endsWith(".js"));
+
+for (const file of eventFiles) {
+  const filePath = path.join(eventsPath, file);
+  const event = (await import(filePath)).default;
+
+  if (event.once) {
+    client.once(event.name, (...args) => event.execute(...args, client));
+  } else {
+    client.on(event.name, (...args) => event.execute(...args, client));
+  }
+
+  console.log(`✔ Loaded event: ${event.name}`);
+}
+
+// ▼ Bot ログイン
+client.login(process.env.DISCORD_TOKEN);
