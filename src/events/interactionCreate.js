@@ -1,10 +1,7 @@
-// src/events/interactionCreate.js
-
 export default {
   name: "interactionCreate",
   async execute(interaction, client) {
     try {
-      // ===== スラッシュコマンド =====
       if (interaction.isChatInputCommand()) {
         const command = client.commands.get(interaction.commandName);
 
@@ -19,24 +16,16 @@ export default {
         return;
       }
 
-      // ===== ボタン処理 =====
       if (interaction.isButton()) {
         const [prefix] = interaction.customId.split(":");
-
         const handler = client.buttonHandlers?.get(prefix);
-        if (handler) {
-          return handler(interaction, client);
-        }
+        if (handler) return handler(interaction, client);
       }
 
-      // ===== セレクトメニュー処理 =====
       if (interaction.isStringSelectMenu()) {
         const handler = client.selectHandlers?.get(interaction.customId);
-        if (handler) {
-          return handler(interaction, client);
-        }
+        if (handler) return handler(interaction, client);
       }
-
     } catch (error) {
       console.error("❌ interactionCreate エラー:", error);
 
