@@ -1,96 +1,79 @@
-// src/utils/userDB.js
 import fs from "fs";
 import path from "path";
 
-const usersDir = path.resolve("src/data/users");
+const usersPath = path.join(process.cwd(), "src", "data", "users");
 
-// ===============================
-// 📌 フォルダが無ければ作成する
-// ===============================
-if (!fs.existsSync(usersDir)) {
-  fs.mkdirSync(usersDir, { recursive: true });
+function getUserFile(userId) {
+    return path.join(usersPath, `${userId}.json`);
 }
 
-// ===============================
-// 📌 ユーザーファイルのパスを取得
-// ===============================
-function getUserFilePath(guildId, userId) {
-  const guildFolder = path.join(usersDir, guildId);
-
-  if (!fs.existsSync(guildFolder)) {
-    fs.mkdirSync(guildFolder, { recursive: true });
-  }
-
-  return path.join(guildFolder, `${userId}.json`);
+function createUser(userId) {
+    return {
+        id: userId,
+        balance: 0,        // 所持金
+        bank: 0,           // 銀行残高
+        diamond: 0,        // ダイヤ
+        items: {},         // { itemId: 個数 }
+        lastWorked: 0,     // /work クールダウン用
+        lastSlut: 0,       // /slut クールダウン用
+        lastCrime: 0,      // /crime クールダウン用
+    };
 }
 
-// ===============================
-// 📌 読み込み（なければ初期化）
-// ===============================
-export async function readUserData(guildId, userId) {
-  const filePath = getUserFilePath(guildId, userId);
+export function getUser(userId) {
+    const file = getUserFile(userId);
 
-  // 既存のファイルがあるなら読み込む
-  if (fs.existsSync(filePath)) {
-    const raw = fs.readFileSync(filePath, "utf8");
-    return JSON.parse(raw);
-  }
+    if (!fs.existsSync(file)) {
+        const newUser = createUser(userId);
+        fs.writeFileSync(file, JSON.stringify(newUser, null, 4));
+        return newUser;
+    }
 
-  // 初期データ（自由に拡張可能）
-  const defaultData = {
-    money: 0,
-    bank: 0,
-    inventory: [],
-    cooldowns: {
-      work: 0,
-      slut: 0,
-      crime: 0,
-    },
-    createdItems: [], // このユーザーが作成したアイテムのID
-  };
-
-  fs.writeFileSync(filePath, JSON.stringify(defaultData, null, 2));
-  return defaultData;
+    const data = fs.readFileSync(file);
+    return JSON.parse(data);
 }
 
-// ===============================
-// 📌 書き込み（完全保存）
-// ===============================
-export async function writeUserData(guildId, userId, data) {
-  const filePath = getUserFilePath(guildId, userId);
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+export function saveUser(userId, data) {
+    const file = getUserFile(userId);
+    fs.writeFileSync(file, JSON.stringify(data, null, 4));
 }
 
-// ===============================
-// 📌 お金の増減（サービス層から呼ぶ）
-// ===============================
-export async function addMoney(guildId, userId, amount) {
-  const data = await readUserData(guildId, userId);
-  data.money += amount;
-  await writeUserData(guildId, userId, data);
-  return data.money;
+export function addMoney(userId, amount) {
+    const user = getUser(userId);
+    user.balance += amount;
+    saveUser(userId, user);
+    return user.balance;
 }
 
-export async function removeMoney(guildId, userId, amount) {
-  const data = await readUserData(guildId, userId);
-  data.money = Math.max(0, data.money - amount);
-  await writeUserData(guildId, userId, data);
-  return data.money;
+export function removeMoney(userId, amount) {
+    const user = getUser(userId);
+    user.balance = Math.max(0, user.balance - amount);
+    saveUser(userId, user);
+    return user.balance;
 }
 
-// ===============================
-// 📌 銀行の増減
-// ===============================
-export async function addBank(guildId, userId, amount) {
-  const data = await readUserData(guildId, userId);
-  data.bank += amount;
-  await writeUserData(guildId, userId, data);
-  return data.bank;
+export function addDiamond(userId, amount) {
+    const user = getUser(userId);
+    user.diamond += amount;
+    saveUser(userId, user);
+    return user.diamond;
 }
 
-export async function removeBank(guildId, userId, amount) {
-  const data = await readUserData(guildId, userId);
-  data.bank = Math.max(0, data.bank - amount);
-  await writeUserData(guildId, userId, data);
-  return data.bank;
+export function addItem(userId, itemId, count = 1) {
+    const user = getUser(userId);
+    if (!user.items[itemId]) user.items[itemId] = 0;
+    user.items[itemId] += count;
+    saveUser(userId, user);
+    return user.items[itemId];
+}
+
+export function removeItem(userId, itemId, count = 1) {
+    const user = getUser(userId);
+    if (!user.items[itemId]) return 0;
+
+    user.items[itemId] -= count;
+    if (user.items[itemId] <= 0) delete user.items[itemId];
+
+    saveUser(userId, user);
+    return user.items[itemId] || 0;
 }
