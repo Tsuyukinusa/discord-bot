@@ -1,79 +1,64 @@
-import fs from "fs";
+// src/data/users/userDB.js
+
+import fs from "fs/promises";
 import path from "path";
 
-const usersPath = path.join(process.cwd(), "src", "data", "users");
+const userDBPath = path.resolve("src", "data", "users", "users.json");
 
-function getUserFile(userId) {
-    return path.join(usersPath, `${userId}.json`);
+// ===============================
+// 📌 JSON初期化
+// ===============================
+async function init() {
+  try {
+    await fs.access(userDBPath);
+  } catch {
+    await fs.mkdir(path.dirname(userDBPath), { recursive: true });
+    await fs.writeFile(userDBPath, JSON.stringify({}, null, 2));
+  }
 }
 
-function createUser(userId) {
-    return {
-        id: userId,
-        balance: 0,        // 所持金
-        bank: 0,           // 銀行残高
-        diamond: 0,        // ダイヤ
-        items: {},         // { itemId: 個数 }
-        lastWorked: 0,     // /work クールダウン用
-        lastSlut: 0,       // /slut クールダウン用
-        lastCrime: 0,      // /crime クールダウン用
+// ===============================
+// 📌 データ読み込み
+// ===============================
+export async function readUserDB(userId) {
+  await init();
+
+  const raw = await fs.readFile(userDBPath, "utf-8");
+  const db = JSON.parse(raw);
+
+  if (!db[userId]) {
+    db[userId] = {
+      balance: 0,        // 所持金
+      bank: 0,           // 銀行
+      diamonds: 0,       // ガチャダイヤ
+      items: {},         // アイテム { itemName: 数量 }
     };
+    await fs.writeFile(userDBPath, JSON.stringify(db, null, 2));
+  }
+
+  return db[userId];
 }
 
-export function getUser(userId) {
-    const file = getUserFile(userId);
+// ===============================
+// 📌 データ書き込み
+// ===============================
+export async function writeUserDB(userId, data) {
+  await init();
 
-    if (!fs.existsSync(file)) {
-        const newUser = createUser(userId);
-        fs.writeFileSync(file, JSON.stringify(newUser, null, 4));
-        return newUser;
-    }
+  const raw = await fs.readFile(userDBPath, "utf-8");
+  const db = JSON.parse(raw);
 
-    const data = fs.readFileSync(file);
-    return JSON.parse(data);
+  db[userId] = data;
+
+  await fs.writeFile(userDBPath, JSON.stringify(db, null, 2));
 }
 
-export function saveUser(userId, data) {
-    const file = getUserFile(userId);
-    fs.writeFileSync(file, JSON.stringify(data, null, 4));
-}
+// ===============================
+// 📌 全ユーザーDB取得（ランキング用）
+// ===============================
+export async function readAllUsers() {
+  await init();
 
-export function addMoney(userId, amount) {
-    const user = getUser(userId);
-    user.balance += amount;
-    saveUser(userId, user);
-    return user.balance;
-}
-
-export function removeMoney(userId, amount) {
-    const user = getUser(userId);
-    user.balance = Math.max(0, user.balance - amount);
-    saveUser(userId, user);
-    return user.balance;
-}
-
-export function addDiamond(userId, amount) {
-    const user = getUser(userId);
-    user.diamond += amount;
-    saveUser(userId, user);
-    return user.diamond;
-}
-
-export function addItem(userId, itemId, count = 1) {
-    const user = getUser(userId);
-    if (!user.items[itemId]) user.items[itemId] = 0;
-    user.items[itemId] += count;
-    saveUser(userId, user);
-    return user.items[itemId];
-}
-
-export function removeItem(userId, itemId, count = 1) {
-    const user = getUser(userId);
-    if (!user.items[itemId]) return 0;
-
-    user.items[itemId] -= count;
-    if (user.items[itemId] <= 0) delete user.items[itemId];
-
-    saveUser(userId, user);
-    return user.items[itemId] || 0;
+  const raw = await fs.readFile(userDBPath, "utf-8");
+  return JSON.parse(raw);
 }
