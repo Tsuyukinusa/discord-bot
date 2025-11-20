@@ -58,8 +58,8 @@ export async function readGuildDB(guildId = null) {
       },
 
       failRate: {               // /set fail rate
-        slut: 0.3,              // 30%
-        crime: 0.4,
+        slut: 0.0,              // 30%
+        crime: 0.0,
       },
 
       customReplies: {          // /add reply
