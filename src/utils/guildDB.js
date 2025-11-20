@@ -25,7 +25,7 @@ function defaultGuild(guildId) {
     return {
         guildId,
         currency: "💰",
-        startBalance: 0,
+        startBalance: 1000,
 
         incomeRoles: {},        // roleId: moneyAmount
         cooldowns: {            // コマンドのクールダウン
@@ -35,25 +35,25 @@ function defaultGuild(guildId) {
         },
 
         work: {
-            min: 50,
-            max: 200
+            min: 1200,
+            max: 2000
         },
         slut: {
-            min: 100,
-            max: 300,
-            failMin: 10,
-            failMax: 80,
-            failRate: 30
+            min: 1800,
+            max: 2600,
+            failMin: 1000,
+            failMax: 1500,
+            failRate: 0
         },
         crime: {
-            min: 150,
-            max: 500,
-            failMin: 20,
-            failMax: 120,
-            failRate: 40
+            min: 6000,
+            max: 10000,
+            failMin: 10000,
+            failMax: 20000,
+            failRate: 0
         },
 
-        interestRate: 1.2,    // 金利
+        interestRate: 0.6,    // 金利
     };
 }
 
