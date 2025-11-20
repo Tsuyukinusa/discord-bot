@@ -1,4 +1,3 @@
-
 import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
 import { readGuildDB, writeGuildDB } from "../../utils/file.js";
 
