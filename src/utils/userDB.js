@@ -1,64 +1,60 @@
-// src/data/users/userDB.js
-
-import fs from "fs/promises";
+import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 
-const userDBPath = path.resolve("src", "data", "users", "users.json");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// ===============================
-// 📌 JSON初期化
-// ===============================
-async function init() {
-  try {
-    await fs.access(userDBPath);
-  } catch {
-    await fs.mkdir(path.dirname(userDBPath), { recursive: true });
-    await fs.writeFile(userDBPath, JSON.stringify({}, null, 2));
-  }
+const usersPath = path.join(__dirname, "..", "data", "users", "users.json");
+
+// JSON読み込み
+function loadUsers() {
+    if (!fs.existsSync(usersPath)) {
+        fs.writeFileSync(usersPath, JSON.stringify({}));
+    }
+    return JSON.parse(fs.readFileSync(usersPath, "utf8"));
 }
 
-// ===============================
-// 📌 データ読み込み
-// ===============================
-export async function readUserDB(userId) {
-  await init();
+// JSON保存
+function saveUsers(data) {
+    fs.writeFileSync(usersPath, JSON.stringify(data, null, 2));
+}
 
-  const raw = await fs.readFile(userDBPath, "utf-8");
-  const db = JSON.parse(raw);
-
-  if (!db[userId]) {
-    db[userId] = {
-      balance: 0,        // 所持金
-      bank: 0,           // 銀行
-      diamonds: 0,       // ガチャダイヤ
-      items: {},         // アイテム { itemName: 数量 }
+// 初期値テンプレ（あなたの仕様に基づく）
+function defaultUser(userId, guildId) {
+    return {
+        userId,
+        guildId,
+        balance: 0,
+        bank: 0,
+        diamonds: 0, // ガチャダイヤ追加済み
+        inventory: [],
+        lastUsed: {
+            work: 0,
+            slut: 0,
+            crime: 0
+        }
     };
-    await fs.writeFile(userDBPath, JSON.stringify(db, null, 2));
-  }
-
-  return db[userId];
 }
 
-// ===============================
-// 📌 データ書き込み
-// ===============================
-export async function writeUserDB(userId, data) {
-  await init();
+// ユーザーデータ取得
+export function getUser(userId, guildId) {
+    const users = loadUsers();
+    const key = `${guildId}-${userId}`;
 
-  const raw = await fs.readFile(userDBPath, "utf-8");
-  const db = JSON.parse(raw);
-
-  db[userId] = data;
-
-  await fs.writeFile(userDBPath, JSON.stringify(db, null, 2));
+    if (!users[key]) {
+        users[key] = defaultUser(userId, guildId);
+        saveUsers(users);
+    }
+    return users[key];
 }
 
-// ===============================
-// 📌 全ユーザーDB取得（ランキング用）
-// ===============================
-export async function readAllUsers() {
-  await init();
+// ユーザーデータ更新
+export function updateUser(userId, guildId, newData) {
+    const users = loadUsers();
+    const key = `${guildId}-${userId}`;
 
-  const raw = await fs.readFile(userDBPath, "utf-8");
-  return JSON.parse(raw);
+    users[key] = { ...getUser(userId, guildId), ...newData };
+    saveUsers(users);
+    return users[key];
 }
