@@ -1,76 +1,107 @@
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const filePath = path.join(process.cwd(), "data", "guilds.json");
 
-const guildsPath = path.join(__dirname, "..", "data", "guilds", "guilds.json");
-
-// JSON読み込み
-function loadGuilds() {
-    if (!fs.existsSync(guildsPath)) {
-        fs.writeFileSync(guildsPath, JSON.stringify({}));
+// -----------------------------
+// JSONデータ読み込み
+// -----------------------------
+function load() {
+    if (!fs.existsSync(filePath)) {
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+        fs.writeFileSync(filePath, JSON.stringify({}, null, 2));
     }
-    return JSON.parse(fs.readFileSync(guildsPath, "utf8"));
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
-// JSON保存
-function saveGuilds(data) {
-    fs.writeFileSync(guildsPath, JSON.stringify(data, null, 2));
+// -----------------------------
+// JSONデータ保存
+// -----------------------------
+function save(data) {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 }
 
-// 初期値テンプレ（あなたの仕様に基づく）
-function defaultGuild(guildId) {
-    return {
-        guildId,
-        currency: "💰",
-        startBalance: 1000,
+// -----------------------------
+// デフォルト設定
+// -----------------------------
+const defaultSettings = {
+    diamond: { min: 10, max: 50 },
+    fine: { min: 5, max: 20 },
+    cooldown: {
+        work: 30,
+        slut: 30,
+        crime: 30
+    }
+};
 
-        incomeRoles: {},        // roleId: moneyAmount
-        cooldowns: {            // コマンドのクールダウン
-            work: 300000,
-            slut: 300000,
-            crime: 300000
-        },
-
-        work: {
-            min: 1200,
-            max: 2000
-        },
-        slut: {
-            min: 1800,
-            max: 2600,
-            failMin: 1000,
-            failMax: 1500,
-            failRate: 0
-        },
-        crime: {
-            min: 6000,
-            max: 10000,
-            failMin: 10000,
-            failMax: 20000,
-            failRate: 0
-        },
-
-        interestRate: 0.6,    // 金利
-    };
-}
-
-// ギルドデータ取得
+// -----------------------------
+// ギルド取得（なければ作成）
+// -----------------------------
 export function getGuild(guildId) {
-    const guilds = loadGuilds();
-    if (!guilds[guildId]) {
-        guilds[guildId] = defaultGuild(guildId);
-        saveGuilds(guilds);
+    const db = load();
+
+    // 初回ならデフォルト作成
+    if (!db[guildId]) {
+        db[guildId] = {
+            settings: JSON.parse(JSON.stringify(defaultSettings))
+        };
+        save(db);
     }
-    return guilds[guildId];
+
+    return db[guildId];
 }
 
-// ギルドデータ更新
+// -----------------------------
+// ギルド設定の部分更新
+// -----------------------------
 export function updateGuild(guildId, newData) {
-    const guilds = loadGuilds();
-    guilds[guildId] = { ...getGuild(guildId), ...newData };
-    saveGuilds(guilds);
-    return guilds[guildId];
+    const db = load();
+
+    // ギルドが存在しない場合は初期化
+    if (!db[guildId]) {
+        db[guildId] = {
+            settings: JSON.parse(JSON.stringify(defaultSettings))
+        };
+    }
+
+    // 深いマージ
+    db[guildId] = deepMerge(db[guildId], newData);
+
+    save(db);
+}
+
+// -----------------------------
+// 深いマージ（settings内だけ更新して保持）
+// -----------------------------
+function deepMerge(target, source) {
+    for (const key of Object.keys(source)) {
+        if (
+            typeof target[key] === "object" &&
+            typeof source[key] === "object" &&
+            !Array.isArray(target[key])
+        ) {
+            target[key] = deepMerge(target[key], source[key]);
+        } else {
+            target[key] = source[key];
+        }
+    }
+    return target;
+}
+
+// -----------------------------
+// 設定リセット（デフォルトに戻す）
+// -----------------------------
+export function resetGuild(guildId) {
+    const db = load();
+    db[guildId] = {
+        settings: JSON.parse(JSON.stringify(defaultSettings))
+    };
+    save(db);
+}
+
+// -----------------------------
+// 全ギルドのデータ取得（管理ツールなど向け）
+// -----------------------------
+export function getAllGuilds() {
+    return load();
 }
