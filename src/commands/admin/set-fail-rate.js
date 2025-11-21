@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
+import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from "discord.js";
 import { getGuild, updateGuild } from "../../utils/guildDB.js";
 
 export default {
@@ -27,7 +27,12 @@ export default {
         const percent = interaction.options.getInteger("percent");
 
         if (percent < 0 || percent > 100) {
-            return interaction.reply("❌ 失敗率は **0〜100%** の間で指定してください。");
+            const errorEmbed = new EmbedBuilder()
+                .setColor("Red")
+                .setTitle("❌ エラー")
+                .setDescription("失敗率は **0〜100%** の間で指定してください。");
+
+            return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
         }
 
         const guild = getGuild(guildId);
@@ -36,8 +41,12 @@ export default {
 
         updateGuild(guildId, guild);
 
-        return interaction.reply(
-            `✅ **${cmd} の失敗率を ${percent}% に設定しました！**`
-        );
+        const successEmbed = new EmbedBuilder()
+            .setColor("Green")
+            .setTitle("⚙️ 設定を更新しました")
+            .setDescription(`**${cmd} の失敗率を ${percent}% に設定しました！**`)
+            .setTimestamp();
+
+        return interaction.reply({ embeds: [successEmbed] });
     }
 };
