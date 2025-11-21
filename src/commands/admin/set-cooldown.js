@@ -1,4 +1,8 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
+import {
+    SlashCommandBuilder,
+    PermissionFlagsBits,
+    EmbedBuilder
+} from "discord.js";
 import { getGuild, updateGuild } from "../../utils/guildDB.js";
 
 export default {
@@ -28,17 +32,30 @@ export default {
         const seconds = interaction.options.getInteger("seconds");
 
         if (seconds < 0) {
-            return interaction.reply("❌ クールダウンは 0 秒以上にしてください。");
+            const errorEmbed = new EmbedBuilder()
+                .setColor(0xff4444)
+                .setTitle("❌ 無効な値")
+                .setDescription("クールダウンは **0秒以上** で設定してください。");
+
+            return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
         }
 
         const guild = getGuild(guildId);
 
-        guild.cooldowns[target] = seconds * 1000; // ← ミリ秒に変換
+        // 秒 → ミリ秒へ変換
+        guild.cooldowns[target] = seconds * 1000;
 
         updateGuild(guildId, guild);
 
-        return interaction.reply(
-            `✅ **${target} のクールダウンを ${seconds} 秒 に設定しました！**`
-        );
+        const embed = new EmbedBuilder()
+            .setColor(0x00aaff)
+            .setTitle("⏱ クールダウン設定完了")
+            .addFields(
+                { name: "コマンド", value: `\`${target}\``, inline: true },
+                { name: "設定秒数", value: `**${seconds} 秒**`, inline: true }
+            )
+            .setTimestamp();
+
+        return interaction.reply({ embeds: [embed] });
     }
 };
