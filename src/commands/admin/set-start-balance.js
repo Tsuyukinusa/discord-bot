@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from "discord.js";
+import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
 import { readGuildDB, writeGuildDB } from "../../utils/file.js";
 
 export default {
@@ -20,21 +20,25 @@ export default {
 
     const db = await readGuildDB();
 
-    // 🌟 埋め込みメッセージ
-    const embed = new EmbedBuilder()
-      .setTitle("初期所持金の設定")
-      .setDescription(`新規ユーザーの初期所持金を以下の値に設定しました。`)
-      .addFields({
-        name: "💰 初期所持金",
-        value: `**${amount}**`,
-        inline: false,
-      })
-      .setColor("#00b894")
-      .setTimestamp();
+    // サーバーデータがなければ作る
+    if (!db[guildId]) db[guildId] = {};
+
+    // economyがなければ、Reset economy コマンドで作る想定なのでここでは何もしない
+    if (!db[guildId].economy) {
+      return interaction.reply({
+        content: "⚠️ 経済システムがまだ初期化されていません。\n`/economy-reset` を先に実行してください。",
+        ephemeral: true,
+      });
+    }
+
+    // 初期所持金を設定
+    db[guildId].economy.startBalance = amount;
+
+    await writeGuildDB(db);
 
     return interaction.reply({
-      embeds: [embed],
+      content: `✅ 初期所持金が **${amount}** に設定されました！`,
       ephemeral: false,
     });
   },
-};
+}
