@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { getUser, getAllUsers } from "../../utils/userdb.js";
 
 export default {
@@ -11,7 +11,7 @@ export default {
         const userId = interaction.user.id;
         const guildId = interaction.guild.id;
 
-        // ユーザーデータ取得
+        // --- ユーザーデータ取得 ---
         const user = getUser(guildId, userId);
 
         if (!user.money) user.money = 0;
@@ -31,16 +31,31 @@ export default {
         const rank = usersArray.findIndex(u => u.id === userId) + 1;
         const totalUsers = usersArray.length;
 
-        // --- 表示 ---
-        const msg =
-`🏆 **サーバー内総資産ランキング:** **${rank}位 / ${totalUsers}人中**
+        // --- 埋め込み作成 ---
+        const embed = new EmbedBuilder()
+            .setColor("#00c3ff")
+            .setTitle(`🏦 ${interaction.user.username} の残高`)
+            .setDescription(`**🏆 ランキング:** ${rank}位 / ${totalUsers}人中`)
+            .addFields(
+                {
+                    name: "💰 所持金（Wallet）",
+                    value: `**${user.money.toLocaleString()}**`,
+                    inline: true
+                },
+                {
+                    name: "🏛️ 銀行（Bank）",
+                    value: `**${user.bank.toLocaleString()}**`,
+                    inline: true
+                },
+                {
+                    name: "💎 総資産（Total）",
+                    value: `**${total.toLocaleString()}**`,
+                    inline: false
+                }
+            )
+            .setThumbnail(interaction.user.displayAvatarURL({ dynamic: true }))
+            .setTimestamp();
 
-**💰 あなたの資産状況**
-所持金（Wallet）: **${user.money.toLocaleString()}**
-銀行預金（Bank）: **${user.bank.toLocaleString()}**
-総資産（Total）: **${total.toLocaleString()}**
-`;
-
-        await interaction.reply(msg);
+        await interaction.reply({ embeds: [embed] });
     }
 };
