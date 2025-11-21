@@ -69,6 +69,22 @@ replies: {
     }
 }
 
+guild.items = {
+  アイテムID: {
+    id: "A",
+    name: "アイテム名",
+    creator: "ユーザーID",
+    price: 売値,
+    cost: 原価,
+    effect: {
+      type: "money" / "xp" / "role",
+      amount: 数値,
+      roleId: （role の場合のみ）
+    },
+    stock: 0
+  }
+}
+
 // -----------------------------
 // ギルド取得
 // -----------------------------
