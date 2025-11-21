@@ -1,6 +1,7 @@
 import {
   SlashCommandBuilder,
   PermissionFlagsBits,
+  EmbedBuilder
 } from "discord.js";
 import { readGuildDB, writeGuildDB } from "../../utils/file.js";
 
@@ -29,33 +30,60 @@ export default {
     if (!db[guildId].xpIgnoreChannels) db[guildId].xpIgnoreChannels = [];
     const arr = db[guildId].xpIgnoreChannels;
 
+    // ===== ADD =====
     if (sub === "add") {
       if (!arr.includes(channelId)) {
         arr.push(channelId);
         await writeGuildDB(db);
       }
-      return interaction.reply(`🚫 このチャンネルは **XP除外** に設定されました！`);
+
+      const embed = new EmbedBuilder()
+        .setColor(0xff5555)
+        .setTitle("🚫 XP除外チャンネルに追加")
+        .setDescription(`このチャンネルは **XP除外** に設定されました！`)
+        .setTimestamp();
+
+      return interaction.reply({ embeds: [embed] });
     }
 
+    // ===== REMOVE =====
     if (sub === "remove") {
       const i = arr.indexOf(channelId);
       if (i !== -1) {
         arr.splice(i, 1);
         await writeGuildDB(db);
       }
-      return interaction.reply(`✅ このチャンネルは **XP除外解除** されました！`);
+
+      const embed = new EmbedBuilder()
+        .setColor(0x55ff99)
+        .setTitle("✅ XP除外解除")
+        .setDescription(`このチャンネルは **XP除外解除** されました！`)
+        .setTimestamp();
+
+      return interaction.reply({ embeds: [embed] });
     }
 
+    // ===== LIST =====
     if (sub === "list") {
       if (arr.length === 0) {
-        return interaction.reply("📭 **XP除外チャンネルはありません！**");
+        const emptyEmbed = new EmbedBuilder()
+          .setColor(0x00aaff)
+          .setTitle("📭 XP除外チャンネルなし")
+          .setDescription("現在、XPが無効化されているチャンネルはありません。")
+          .setTimestamp();
+
+        return interaction.reply({ embeds: [emptyEmbed] });
       }
 
       const channelList = arr.map((id) => `<#${id}>`).join("\n");
-      return interaction.reply({
-        content: `📌 **XP が加算されないチャンネル一覧：**\n${channelList}`,
-        ephemeral: false,
-      });
+
+      const listEmbed = new EmbedBuilder()
+        .setColor(0x00aaff)
+        .setTitle("📌 XP除外チャンネル一覧")
+        .setDescription(channelList)
+        .setTimestamp();
+
+      return interaction.reply({ embeds: [listEmbed] });
     }
   },
 };
