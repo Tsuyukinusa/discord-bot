@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { readUserDB, writeUserDB } from "../../utils/file.js";
 
 export default {
@@ -11,18 +11,32 @@ export default {
 
     const userDB = await readUserDB(userId);
 
+    // リセット対象なし
     if (!userDB.profile) {
+      const noDataEmbed = new EmbedBuilder()
+        .setColor(0xffcc00)
+        .setTitle("⚠ リセットできる設定がありません")
+        .setDescription("プロフィールカードの設定が見つかりませんでした。")
+        .setTimestamp();
+
       return interaction.reply({
-        content: "⚠ リセットするプロフィール設定がありません。",
+        embeds: [noDataEmbed],
         ephemeral: true,
       });
     }
 
+    // リセット処理
     delete userDB.profile;
     await writeUserDB(userId, userDB);
 
+    const successEmbed = new EmbedBuilder()
+      .setColor(0x00aaff)
+      .setTitle("🔄 プロフィール設定をリセットしました！")
+      .setDescription("プロフィールカードの全設定を初期状態に戻しました。")
+      .setTimestamp();
+
     return interaction.reply({
-      content: "🔄 プロフィール設定をリセットしました！",
+      embeds: [successEmbed],
       ephemeral: true,
     });
   },
