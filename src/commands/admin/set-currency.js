@@ -1,6 +1,5 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
+import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from "discord.js";
 import { readGuildDB, writeGuildDB } from "../../utils/file.js";
-import { ensureEconomy } from "../../utils/initEconomy.js";
 
 export default {
   data: new SlashCommandBuilder()
@@ -9,7 +8,7 @@ export default {
     .addStringOption(option =>
       option
         .setName("symbol")
-        .setDescription("設定する通貨記号（絵文字OK）")
+        .setDescription("設定したい通貨記号（絵文字も可）")
         .setRequired(true)
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
@@ -19,17 +18,3 @@ export default {
     const symbol = interaction.options.getString("symbol");
 
     const db = await readGuildDB();
-
-    // 共通の初期化
-    ensureEconomy(db, guildId);
-
-    db[guildId].economy.currency = symbol;
-
-    await writeGuildDB(db);
-
-    return interaction.reply({
-      content: `💱 通貨記号が **${symbol}** に変更されました！`,
-      ephemeral: false,
-    });
-  },
-};
