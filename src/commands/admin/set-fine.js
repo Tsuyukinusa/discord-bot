@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
+import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from "discord.js";
 import { getGuild, updateGuild } from "../../utils/guildDB.js";
 
 export default {
@@ -28,31 +28,49 @@ export default {
 
     async execute(interaction) {
         const guildId = interaction.guild.id;
-        const command = interaction.options.getString("command"); // slut or crime
+        const command = interaction.options.getString("command");
         const min = interaction.options.getInteger("min");
         const max = interaction.options.getInteger("max");
 
-        // === エラーチェック ===
+        // ===== エラー Embed =====
         if (min < 0 || max < 0) {
-            return interaction.reply("❌ **罰金は 0 以上を設定してください。**");
-        }
-        if (min > max) {
-            return interaction.reply("❌ **min は max 以下にしてください。**");
+            const errorEmbed = new EmbedBuilder()
+                .setColor("Red")
+                .setTitle("❌ エラー")
+                .setDescription("罰金額は **0 以上** を設定してください。");
+
+            return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
         }
 
-        // === Guild 設定読み込み ===
+        if (min > max) {
+            const errorEmbed = new EmbedBuilder()
+                .setColor("Red")
+                .setTitle("❌ エラー")
+                .setDescription("**min は max 以下** にしてください。");
+
+            return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        }
+
+        // ===== Guild データ読み込み =====
         const guild = getGuild(guildId);
 
-        // === 対象コマンドの罰金を更新 ===
+        // ===== 設定更新 =====
         guild.settings[command].fineMin = min;
         guild.settings[command].fineMax = max;
 
-        // === 保存 ===
         updateGuild(guildId, guild);
 
-        return interaction.reply(
-            `✅ **${command} の罰金額を更新しました！**\n` +
-            `最小: **${min}**\n最大: **${max}**`
-        );
+        // ===== 成功 Embed =====
+        const successEmbed = new EmbedBuilder()
+            .setColor("Green")
+            .setTitle("💰 罰金設定を更新しました")
+            .setDescription(
+                `**${command} の罰金額が更新されました！**\n\n` +
+                `🔻 **最小額:** ${min}\n` +
+                `🔺 **最大額:** ${max}`
+            )
+            .setTimestamp();
+
+        return interaction.reply({ embeds: [successEmbed] });
     },
 };
