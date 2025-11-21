@@ -1,50 +1,73 @@
-import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import {
+    SlashCommandBuilder,
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle
+} from "discord.js";
+
 import { getAllUsers } from "../../utils/userdb.js";
 
 export default {
     data: new SlashCommandBuilder()
-        .setName("rank")
-        .setDescription("サーバーの総資産ランキングを表示します"),
+        .setName("leaderboard")
+        .setDescription("サーバーの資産ランキングを表示します"),
 
     async execute(interaction) {
         const guildId = interaction.guild.id;
-        const allUsers = getAllUsers()[guildId] || {};
 
-        // --- ユーザーデータを配列にまとめる ---
-        const usersArray = Object.entries(allUsers).map(([id, data]) => ({
+        // --- 全ユーザー取得 ---
+        const all = getAllUsers()[guildId] || {};
+
+        const usersArray = Object.entries(all).map(([id, data]) => ({
             id,
+            total: (data.money || 0) + (data.bank || 0),
             money: data.money || 0,
-            bank: data.bank || 0,
-            total: (data.money || 0) + (data.bank || 0)
+            bank: data.bank || 0
         }));
 
-        // 一人も経済データが無い場合
-        if (usersArray.length === 0) {
-            return interaction.reply("まだ誰も経済データを持っていません。");
-        }
-
-        // --- 降順でソート ---
+        // --- 降順にソート ---
         usersArray.sort((a, b) => b.total - a.total);
 
-        // --- 上位10人のみ ---
-        const top = usersArray.slice(0, 10);
+        // --- ページング ---
+        const page = 1;
+        const perPage = 10;
+        const maxPage = Math.ceil(usersArray.length / perPage);
 
-        // --- ランキングの文字を作成 ---
-        let desc = top
-            .map((u, i) => {
-                const member = interaction.guild.members.cache.get(u.id);
-                const name = member ? member.user.username : "不明ユーザー";
+        const show = usersArray.slice((page - 1) * perPage, page * perPage);
 
-                return `**${i + 1}位** — ${name}\n💰 所持金: **${u.money.toLocaleString()}**　🏛️ 銀行: **${u.bank.toLocaleString()}**　💎 総資産: **${u.total.toLocaleString()}**`;
-            })
-            .join("\n\n");
-
+        // --- 埋め込み作成 ---
         const embed = new EmbedBuilder()
-            .setColor("#00c3ff")
-            .setTitle("🏆 サーバー総資産ランキング TOP10")
-            .setDescription(desc)
-            .setTimestamp();
+            .setTitle("🏆 資産ランキング - Leaderboard")
+            .setColor(0xffcc00)
+            .setFooter({ text: `ページ ${page} / ${maxPage}` })
+            .setDescription(
+                show
+                    .map((u, i) => {
+                        const rank = i + 1;
+                        return `**${rank}位** <@${u.id}> — 💰 **${u.total.toLocaleString()}**`;
+                    })
+                    .join("\n")
+            );
 
-        await interaction.reply({ embeds: [embed] });
+        // --- ボタン行 ---
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`rank-prev:${page}`)
+                .setLabel("◀")
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(true),
+
+            new ButtonBuilder()
+                .setCustomId(`rank-next:${page}`)
+                .setLabel("▶")
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(maxPage === 1)
+        );
+
+        await interaction.reply({
+            embeds: [embed],
+            components: [row]
+        });
     }
 };
