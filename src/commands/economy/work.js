@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { getGuild } from "../../utils/guildDB.js";
 import { getUser, updateUser } from "../../utils/userDB.js";
 
@@ -16,24 +16,31 @@ export default {
 
         const now = Date.now();
 
-        // --- クールダウンチェック ---
+        // --- クールダウン ---
         const cd = guild.settings.cooldown.work * 1000;
         if (user.cooldowns.work && now - user.cooldowns.work < cd) {
             const remaining = Math.ceil((cd - (now - user.cooldowns.work)) / 1000);
-            return interaction.reply(`⏳ まだクールダウン中です: **${remaining}秒**`);
+
+            const cdEmbed = new EmbedBuilder()
+                .setColor("#ffcc00")
+                .setTitle("⏳ クールダウン中")
+                .setDescription(`あと **${remaining} 秒** 待ってください。`)
+                .setTimestamp();
+
+            return interaction.reply({ embeds: [cdEmbed] });
         }
 
-        // --- ランダム金額とダイヤ ---
+        // --- ランダム金額 ---
         const money =
             Math.floor(
                 Math.random() *
-                    (guild.settings.work.moneyMax - guild.settings.work.moneyMin + 1)
+                (guild.settings.work.moneyMax - guild.settings.work.moneyMin + 1)
             ) + guild.settings.work.moneyMin;
 
         const diamond =
             Math.floor(
                 Math.random() *
-                    (guild.settings.work.diamondMax - guild.settings.work.diamondMin + 1)
+                (guild.settings.work.diamondMax - guild.settings.work.diamondMin + 1)
             ) + guild.settings.work.diamondMin;
 
         // --- 更新 ---
@@ -43,10 +50,26 @@ export default {
 
         updateUser(guildId, userId, user);
 
-        return interaction.reply(
-            `💼 **仕事完了！**\n` +
-                `💰 お金: +**${money}**\n` +
-                `💎 ダイヤ: +**${diamond}**`
-        );
+        // --- 成功Embed ---
+        const embed = new EmbedBuilder()
+            .setColor("#00c3ff")
+            .setTitle("💼 仕事完了！")
+            .setDescription(`${interaction.user.username} さんの作業結果`)
+            .addFields(
+                {
+                    name: "💰 もらえたお金",
+                    value: `+ **${money.toLocaleString()}**`,
+                    inline: true
+                },
+                {
+                    name: "💎 もらえたダイヤ",
+                    value: `+ **${diamond.toLocaleString()}**`,
+                    inline: true
+                }
+            )
+            .setThumbnail(interaction.user.displayAvatarURL())
+            .setTimestamp();
+
+        return interaction.reply({ embeds: [embed] });
     },
 };
