@@ -4,7 +4,7 @@ import path from "path";
 const filePath = path.join(process.cwd(), "data", "guilds.json");
 
 // -----------------------------
-// JSONデータ読み込み
+// JSON読み込み
 // -----------------------------
 function load() {
     if (!fs.existsSync(filePath)) {
@@ -15,7 +15,7 @@ function load() {
 }
 
 // -----------------------------
-// JSONデータ保存
+// JSON保存
 // -----------------------------
 function save(data) {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
@@ -25,8 +25,31 @@ function save(data) {
 // デフォルト設定
 // -----------------------------
 const defaultSettings = {
-    diamond: { min: 10, max: 50 },
-    fine: { min: 5, max: 20 },
+    work: {
+        moneyMin: 1200,
+        moneyMax: 2000,
+        diamondMin: 1,
+        diamondMax: 3
+    },
+
+    slut: {
+        moneyMin: 1800,
+        moneyMax: 2600,
+        failMoneyMin: 1000,
+        failMoneyMax: 1500,
+        diamondMin: 2,
+        diamondMax: 4
+    },
+
+    crime: {
+        moneyMin: 6000,
+        moneyMax: 10000,
+        failMoneyMin: 10000,
+        failMoneyMax: 20000,
+        diamondMin: 3,
+        diamondMax: 7
+    },
+
     cooldown: {
         work: 30,
         slut: 30,
@@ -35,12 +58,11 @@ const defaultSettings = {
 };
 
 // -----------------------------
-// ギルド取得（なければ作成）
+// ギルド取得
 // -----------------------------
 export function getGuild(guildId) {
     const db = load();
 
-    // 初回ならデフォルト作成
     if (!db[guildId]) {
         db[guildId] = {
             settings: JSON.parse(JSON.stringify(defaultSettings))
@@ -52,26 +74,23 @@ export function getGuild(guildId) {
 }
 
 // -----------------------------
-// ギルド設定の部分更新
+// ギルド設定更新
 // -----------------------------
 export function updateGuild(guildId, newData) {
     const db = load();
 
-    // ギルドが存在しない場合は初期化
     if (!db[guildId]) {
         db[guildId] = {
             settings: JSON.parse(JSON.stringify(defaultSettings))
         };
     }
 
-    // 深いマージ
     db[guildId] = deepMerge(db[guildId], newData);
-
     save(db);
 }
 
 // -----------------------------
-// 深いマージ（settings内だけ更新して保持）
+// 深いマージ
 // -----------------------------
 function deepMerge(target, source) {
     for (const key of Object.keys(source)) {
@@ -89,7 +108,7 @@ function deepMerge(target, source) {
 }
 
 // -----------------------------
-// 設定リセット（デフォルトに戻す）
+// デフォルトにリセット
 // -----------------------------
 export function resetGuild(guildId) {
     const db = load();
@@ -100,7 +119,7 @@ export function resetGuild(guildId) {
 }
 
 // -----------------------------
-// 全ギルドのデータ取得（管理ツールなど向け）
+// 全ギルド取得
 // -----------------------------
 export function getAllGuilds() {
     return load();
