@@ -1,4 +1,8 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
+import {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  EmbedBuilder
+} from "discord.js";
 import { readGuildDB, writeGuildDB } from "../../utils/file.js";
 
 export default {
@@ -22,18 +26,32 @@ export default {
 
     const list = guildDB[guildId].vxpIgnoreChannels;
 
+    // ❌ まだ除外されてなかった場合
     if (!list.includes(channel.id)) {
+      const notFoundEmbed = new EmbedBuilder()
+        .setColor(0xff4444)
+        .setTitle("⚠ 除外されていません")
+        .setDescription(`<#${channel.id}> は VXP 除外リストにありません。`)
+        .setTimestamp();
+
       return interaction.reply({
-        content: "⚠ このチャンネルは除外されていません。",
+        embeds: [notFoundEmbed],
         ephemeral: true,
       });
     }
 
+    // ✔ 除外リストから削除
     guildDB[guildId].vxpIgnoreChannels = list.filter(id => id !== channel.id);
     await writeGuildDB(guildDB);
 
+    const successEmbed = new EmbedBuilder()
+      .setColor(0x55ff99)
+      .setTitle("🗑️ 除外解除しました")
+      .setDescription(`<#${channel.id}> を **VXP 除外リスト** から削除しました！`)
+      .setTimestamp();
+
     return interaction.reply({
-      content: `🗑️ <#${channel.id}> を VXP除外リストから削除しました！`,
+      embeds: [successEmbed],
       ephemeral: true,
     });
   },
