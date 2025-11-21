@@ -28,32 +28,32 @@ const defaultSettings = {
     work: {
         moneyMin: 1200,
         moneyMax: 2000,
-        diamondMin: 1,
-        diamondMax: 3
+        diamondMin: 5,
+        diamondMax: 10
     },
 
     slut: {
-        moneyMin: 1800,
+        moneyMin: 2000,
         moneyMax: 2600,
         failMoneyMin: 1000,
         failMoneyMax: 1500,
-        diamondMin: 2,
-        diamondMax: 4
+        diamondMin: 12,
+        diamondMax: 18
     },
 
     crime: {
-        moneyMin: 6000,
-        moneyMax: 10000,
+        moneyMin: 10000,
+        moneyMax: 20000,
         failMoneyMin: 10000,
         failMoneyMax: 20000,
-        diamondMin: 3,
-        diamondMax: 7
+        diamondMin: 40,
+        diamondMax: 70
     },
 
     cooldown: {
-        work: 30,
-        slut: 30,
-        crime: 30
+        work: 60,
+        slut: 60,
+        crime: 60
     }
 };
 
