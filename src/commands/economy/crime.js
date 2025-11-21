@@ -1,11 +1,11 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { getGuild } from "../../utils/guildDB.js";
 import { getUser, updateUser } from "../../utils/userDB.js";
 
 export default {
     data: new SlashCommandBuilder()
         .setName("crime")
-        .setDescription("犯罪をして大金とダイヤを稼ぎます。"),
+        .setDescription("犯罪に手を染めて大金とダイヤを稼ぎます。失敗すると罰金。"),
 
     async execute(interaction) {
         const guildId = interaction.guild.id;
@@ -15,58 +15,103 @@ export default {
         const user = getUser(guildId, userId);
 
         const now = Date.now();
-        const cd = guild.settings.cooldown.crime * 1000;
 
+        // --- クールダウン ---
+        const cd = guild.settings.cooldown.crime * 1000;
         if (user.cooldowns.crime && now - user.cooldowns.crime < cd) {
             const remaining = Math.ceil((cd - (now - user.cooldowns.crime)) / 1000);
-            return interaction.reply(`⏳ まだクールダウン中です: **${remaining}秒**`);
+
+            const embed = new EmbedBuilder()
+                .setColor(0xffcc00)
+                .setTitle("⏳ クールダウン中")
+                .setDescription(`あと **${remaining}秒** 待ってください。`);
+
+            return interaction.reply({ embeds: [embed] });
         }
 
-        // --- 失敗判定 ---
-        const fail = Math.random() < guild.settings.crime.failRate;
+        // === 成功 or 失敗判定 ===
+        const failRate = guild.settings.crime.failRate; // 0〜100 (%)
+        const isFail = Math.random() * 100 < failRate;
 
-        if (fail) {
-            const lost =
+        let replyText = "";
+        let embedColor = 0x00c3ff;
+
+        // ===========================
+        //           成功
+        // ===========================
+        if (!isFail) {
+            const money =
                 Math.floor(
                     Math.random() *
-                        (guild.settings.crime.failMoneyMax - guild.settings.crime.failMoneyMin + 1)
-                ) + guild.settings.crime.failMoneyMin;
+                        (guild.settings.crime.moneyMax - guild.settings.crime.moneyMin + 1)
+                ) + guild.settings.crime.moneyMin;
 
-            user.money = Math.max(0, user.money - lost);
-            user.cooldowns.crime = now;
+            const diamond =
+                Math.floor(
+                    Math.random() *
+                        (guild.settings.crime.diamondMax -
+                            guild.settings.crime.diamondMin +
+                            1)
+                ) + guild.settings.crime.diamondMin;
 
-            updateUser(guildId, userId, user);
+            user.money += money;
+            user.diamond += diamond;
 
-            return interaction.reply(
-                `🚨 **大失敗！**\n` +
-                    `💸 罰金: -**${lost}**\n` +
-                    `💎 ダイヤは失われません。`
-            );
+            // カスタムリプライ
+            const list = guild.settings.replies.success.crime;
+            if (list.length > 0) {
+                const template = list[Math.floor(Math.random() * list.length)];
+
+                replyText = template
+                    .replaceAll("{user}", `<@${userId}>`)
+                    .replaceAll("{money}", `${money}`)
+                    .replaceAll("{diamond}", `${diamond}`);
+            } else {
+                replyText =
+                    `🕶️ **犯罪成功！**\n` +
+                    `💰 お金: +**${money}**\n` +
+                    `💎 ダイヤ: +**${diamond}**`;
+            }
         }
 
-        // --- 成功 ---
-        const money =
-            Math.floor(
-                Math.random() *
-                    (guild.settings.crime.moneyMax - guild.settings.crime.moneyMin + 1)
-            ) + guild.settings.crime.moneyMin;
+        // ===========================
+        //           失敗
+        // ===========================
+        else {
+            const failMoney =
+                Math.floor(
+                    Math.random() *
+                        (guild.settings.crime.failMoneyMax -
+                            guild.settings.crime.failMoneyMin +
+                            1)
+                ) + guild.settings.crime.failMoneyMin;
 
-        const diamond =
-            Math.floor(
-                Math.random() *
-                    (guild.settings.crime.diamondMax - guild.settings.crime.diamondMin + 1)
-            ) + guild.settings.crime.diamondMin;
+            user.money -= failMoney;
+            embedColor = 0xff0000;
 
-        user.money += money;
-        user.diamond += diamond;
+            const list = guild.settings.replies.fail.crime;
+            if (list.length > 0) {
+                const template = list[Math.floor(Math.random() * list.length)];
+
+                replyText = template
+                    .replaceAll("{user}", `<@${userId}>`)
+                    .replaceAll("{failMoney}", `${failMoney}`);
+            } else {
+                replyText =
+                    `🚨 **犯罪失敗！**\n` +
+                    `罰金: -**${failMoney}**`;
+            }
+        }
+
+        // --- セーブ ---
         user.cooldowns.crime = now;
-
         updateUser(guildId, userId, user);
 
-        return interaction.reply(
-            `🤑 **犯罪成功！**\n` +
-                `💰 お金: +**${money}**\n` +
-                `💎 ダイヤ: +**${diamond}**`
-        );
-    },
+        const embed = new EmbedBuilder()
+            .setColor(embedColor)
+            .setTitle("🕶️ Crime 結果")
+            .setDescription(replyText);
+
+        return interaction.reply({ embeds: [embed] });
+    }
 };
