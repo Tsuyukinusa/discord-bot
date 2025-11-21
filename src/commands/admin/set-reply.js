@@ -1,23 +1,31 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
+import {
+    SlashCommandBuilder,
+    PermissionFlagsBits,
+    EmbedBuilder
+} from "discord.js";
 import { getGuild, updateGuild } from "../../utils/guildDB.js";
 
 export default {
     data: new SlashCommandBuilder()
         .setName("setreply")
-        .setDescription("カスタム返信を追加します（管理者専用）")
+        .setDescription("カスタム返信を設定します（管理者のみ）")
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-        .addStringOption(opt =>
-            opt.setName("type")
-                .setDescription("success または fail")
+
+        .addStringOption(option =>
+            option
+                .setName("type")
+                .setDescription("成功メッセージか失敗メッセージかを選択")
                 .setRequired(true)
                 .addChoices(
-                    { name: "success", value: "success" },
-                    { name: "fail", value: "fail" }
+                    { name: "成功（success）", value: "success" },
+                    { name: "失敗（fail）", value: "fail" }
                 )
         )
-        .addStringOption(opt =>
-            opt.setName("command")
-                .setDescription("対象コマンド")
+
+        .addStringOption(option =>
+            option
+                .setName("category")
+                .setDescription("どのコマンドの返信か？")
                 .setRequired(true)
                 .addChoices(
                     { name: "work", value: "work" },
@@ -25,40 +33,65 @@ export default {
                     { name: "crime", value: "crime" }
                 )
         )
-        .addStringOption(opt =>
-            opt.setName("text")
-                .setDescription("追加したいメッセージ（{user} でユーザー名に置換される）")
+
+        .addStringOption(option =>
+            option
+                .setName("message")
+                .setDescription("登録したいカスタムメッセージ（{money} など使えます）")
                 .setRequired(true)
         ),
 
     async execute(interaction) {
-        const type = interaction.options.getString("type");      // success or fail
-        const cmd = interaction.options.getString("command");    // work / slut / crime
-        const text = interaction.options.getString("text");      // 追加文
+        const guildId = interaction.guild.id;
+        const type = interaction.options.getString("type");
+        const category = interaction.options.getString("category");
+        const message = interaction.options.getString("message");
 
-        // fail に work は指定できない
-        if (type === "fail" && cmd === "work") {
-            return interaction.reply("❌ **fail は work に設定できません。slut か crime のみです。**");
+        // fail は work 非対応
+        if (type === "fail" && category === "work") {
+            return interaction.reply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor(0xff0000)
+                        .setTitle("❌ エラー")
+                        .setDescription("`work` の失敗メッセージは設定できません。")
+                ],
+                ephemeral: true
+            });
         }
 
-        const guildId = interaction.guild.id;
         const guild = getGuild(guildId);
 
-        // replies が存在しない場合の保険
-        if (!guild.replies) {
-            guild.replies = {
-                success: { work: [], slut: [], crime: [] },
-                fail: { slut: [], crime: [] }
-            };
-        }
-
-        // 対象配列へ追加
-        guild.replies[type][cmd].push(text);
-
+        guild.settings.replies[type][category].push(message);
         updateGuild(guildId, guild);
 
-        return interaction.reply(
-            `✅ **${type} の ${cmd} に新しい返信を追加しました！**\n追加内容: \`${text}\``
-        );
+        // 成功したあとの埋め込み
+        const embed = new EmbedBuilder()
+            .setColor(0x00c3ff)
+            .setTitle("✅ カスタム返信を追加しました")
+            .addFields(
+                {
+                    name: "種類",
+                    value: type === "success" ? "成功 (success)" : "失敗 (fail)",
+                    inline: true
+                },
+                {
+                    name: "カテゴリ",
+                    value: category,
+                    inline: true
+                },
+                {
+                    name: "追加された内容",
+                    value: "```\n" + message + "\n```"
+                }
+            )
+            .setFooter({
+                text: "テンプレート: {user} {money} {diamond} {failMoney} など利用可能"
+            });
+
+        return interaction.reply({
+            embeds: [embed],
+            ephemeral: true
+        });
     }
 };
