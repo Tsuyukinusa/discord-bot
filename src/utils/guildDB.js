@@ -57,6 +57,18 @@ const defaultSettings = {
     }
 };
 
+replies: {
+    success: {
+        work: [],
+        slut: [],
+        crime: []
+    },
+    fail: {
+        slut: [],
+        crime: []
+    }
+}
+
 // -----------------------------
 // ギルド取得
 // -----------------------------
