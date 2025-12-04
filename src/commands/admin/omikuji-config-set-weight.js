@@ -1,5 +1,5 @@
 // commands/admin/omikuji-config-set-weight.js
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { readGuildDB, writeGuildDB } from "../../utils/file.js";
 
 export default {
@@ -41,12 +41,23 @@ export default {
             });
         }
 
+        // 値変更
         db[guildId].omikujiConfig.results[result].weight = weight;
         await writeGuildDB(db);
 
+        // 埋め込み
+        const embed = new EmbedBuilder()
+            .setColor("#4b9aff")
+            .setTitle("🔧 重みの変更完了")
+            .addFields(
+                { name: "運勢", value: result, inline: true },
+                { name: "新しい重み", value: `${weight}`, inline: true }
+            )
+            .setFooter({ text: "この変更は管理者のみが確認できます。" });
+
         return interaction.reply({
-            content: `🔧 運勢 **${result}** の重みを **${weight}** に変更しました！`,
-            ephemeral: false
+            embeds: [embed],
+            ephemeral: true // ← 自分だけ
         });
     }
 };
