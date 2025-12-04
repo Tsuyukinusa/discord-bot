@@ -1,135 +1,129 @@
-// commands/omikuji/omikuji.js
+// commands/fun/omikuji.js
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { readGuildDB, writeGuildDB } from "../../utils/file.js";
+import { readUserDB, writeUserDB } from "../../utils/userfile.js";
 
 export default {
     data: new SlashCommandBuilder()
         .setName("omikuji")
-        .setDescription("今日の運勢を占います（1日1回）"),
+        .setDescription("今日のおみくじを引きます"),
 
     async execute(interaction) {
         const guildId = interaction.guild.id;
         const userId = interaction.user.id;
 
-        const db = await readGuildDB();
-        if (!db[guildId]) db[guildId] = {};
+        const guildDB = await readGuildDB();
+        const userDB = await readUserDB();
 
-        // -------------------------------
-        // 初期 omikujiConfig が無ければ作る
-        // -------------------------------
-        if (!db[guildId].omikujiConfig) {
-            db[guildId].omikujiConfig = {
-                results: {
-                    daikichi: { name: "大吉", weight: 3, rewards: { money: 1000, xp: 200, diamond: 3, items: [] } },
-                    tyuukichi: { name: "中吉", weight: 10, rewards: { money: 500, xp: 100, diamond: 1, items: [] } },
-                    syoukichi: { name: "小吉", weight: 20, rewards: { money: 300, xp: 60, diamond: 0, items: [] } },
-                    kichi: { name: "吉", weight: 25, rewards: { money: 200, xp: 30, diamond: 0, items: [] } },
-                    suekichi: { name: "末吉", weight: 15, rewards: { money: 150, xp: 20, diamond: 0, items: [] } },
-                    kyou: { name: "凶", weight: 10, rewards: { money: 50, xp: 10, diamond: 0, items: [] } },
-                    daikyou: { name: "大凶", weight: 5, rewards: { money: 20, xp: 5, diamond: 0, items: [] } },
-                    gokukyou: { name: "極凶", weight: 1, rewards: { money: 10, xp: 2, diamond: 0, items: [] }, giveRole: true }
-                },
-                gokukyouRoleRewards: {
-                    1: "ROLE_ID_1",
-                    5: "ROLE_ID_2",
-                    10: "ROLE_ID_3"
-                }
-            };
-        }
+        // --- 設定読み込み ---
+        const cfg = guildDB[guildId]?.omikujiConfig;
+        if (!cfg) return interaction.reply({ content: "❌ このサーバーではおみくじが設定されていません。", ephemeral: true });
 
-        const config = db[guildId].omikujiConfig;
+        // --- 1日1回制限 ---
+        const today = new Date().toLocaleDateString("ja-JP");
+        const last = userDB[userId]?.lastOmikuji || null;
 
-        // -------------------------------
-        // 1日1回の制限
-        // -------------------------------
-        if (!db[guildId].users) db[guildId].users = {};
-        if (!db[guildId].users[userId]) db[guildId].users[userId] = {};
-
-        const user = db[guildId].users[userId];
-        const today = new Date().toDateString();
-
-        if (user.lastOmikuji === today) {
+        if (last === today) {
             return interaction.reply({
                 content: "❌ 今日のおみくじはもう引きました！",
+                ephemeral: true
             });
         }
 
-        user.lastOmikuji = today;
+        // --- ランダム抽選 ---
+        const results = Object.values(cfg.results);
+        const weights = results.map(r => r.weight);
+        const total = weights.reduce((a, b) => a + b, 0);
 
-        // -------------------------------
-        // 抽選処理（weight）
-        // -------------------------------
-        const entries = Object.entries(config.results);
-        const totalWeight = entries.reduce((s, [, r]) => s + r.weight, 0);
-        let rng = Math.random() * totalWeight;
+        let rnd = Math.random() * total;
+        let chosen = null;
 
-        let selectedKey = entries[0][0];
-        for (const [key, result] of entries) {
-            if (rng < result.weight) {
-                selectedKey = key;
+        for (let i = 0; i < results.length; i++) {
+            if (rnd < weights[i]) {
+                chosen = results[i];
                 break;
             }
-            rng -= result.weight;
+            rnd -= weights[i];
         }
 
-        const result = config.results[selectedKey];
+        if (!chosen) chosen = results[0];
 
-        // -------------------------------
-        // 報酬付与
-        // -------------------------------
-        if (!user.money) user.money = 0;
-        if (!user.xp) user.xp = 0;
-        if (!user.diamond) user.diamond = 0;
-        if (!user.items) user.items = {};
+        // --- ユーザーのデータへの反映 ---
+        if (!userDB[userId]) userDB[userId] = {
+            money: 0,
+            xp: 0,
+            diamond: 0,
+            items: [],
+            gokukyouCount: 0
+        };
 
-        user.money += result.rewards.money;
-        user.xp += result.rewards.xp;
-        user.diamond += result.rewards.diamond;
+        let gained = [];
+        let lost = [];
 
-        for (const itemObj of result.rewards.items) {
-            if (!user.items[itemObj.id]) user.items[itemObj.id] = 0;
-            user.items[itemObj.id] += itemObj.amount;
+        // お金
+        if (chosen.rewards.money) {
+            const v = chosen.rewards.money;
+            userDB[userId].money += v;
+            if (v > 0) gained.push(`💰 お金 +${v}`); else lost.push(`💸 お金 ${v}`);
+        }
+        // XP
+        if (chosen.rewards.xp) {
+            const v = chosen.rewards.xp;
+            userDB[userId].xp += v;
+            if (v > 0) gained.push(`✨ XP +${v}`); else lost.push(`⚡ XP ${v}`);
+        }
+        // ダイヤ
+        if (chosen.rewards.diamond) {
+            const v = chosen.rewards.diamond;
+            userDB[userId].diamond += v;
+            if (v > 0) gained.push(`💎 ダイヤ +${v}`); else lost.push(`🪨 ダイヤ ${v}`);
         }
 
-        // -------------------------------
-        // 極凶ロール処理
-        // -------------------------------
-        let roleGiven = null;
+        // アイテム
+        if (chosen.rewards.items?.length > 0) {
+            for (const it of chosen.rewards.items) {
+                userDB[userId].items.push({ id: it.id, amount: it.amount });
+                gained.push(`📦 アイテム ${it.id} x${it.amount}`);
+            }
+        }
 
-        if (selectedKey === "gokukyou") {
-            if (!user.gokukyouCount) user.gokukyouCount = 0;
-            user.gokukyouCount++;
+        // 極凶ならカウント + ロール付与
+        if (chosen.id === "gokukyou") {
+            userDB[userId].gokukyouCount++;
 
-            const count = user.gokukyouCount;
-            const rewardRoles = config.gokukyouRoleRewards;
-
-            if (rewardRoles[count]) {
-                const roleId = rewardRoles[count];
+            const count = userDB[userId].gokukyouCount;
+            const roleId = cfg.gokukyouRoleRewards[count];
+            if (roleId) {
                 const role = interaction.guild.roles.cache.get(roleId);
-
                 if (role) {
                     await interaction.member.roles.add(role);
-                    roleGiven = role;
+                    gained.push(`🎭 ロール付与: **${role.name}**`);
                 }
             }
         }
 
-        await writeGuildDB(db);
+        // 最終記録更新
+        userDB[userId].lastOmikuji = today;
 
-        // -------------------------------
-        // 完成メッセージ（全体公開）
-        // -------------------------------
+        await writeUserDB(userDB);
+
+        // --- 埋め込み作成 ---
         const embed = new EmbedBuilder()
-            .setColor("#ff4b4b")
-            .setTitle(`🎯 今日の運勢：${result.name}`)
+            .setTitle(`🎴 おみくじ結果：${chosen.name}`)
+            .setColor(chosen.color || "#ffffff")
             .addFields(
-                { name: "💰 お金", value: `${result.rewards.money}`, inline: true },
-                { name: "✨ XP", value: `${result.rewards.xp}`, inline: true },
-                { name: "💎 ダイヤ", value: `${result.rewards.diamond}`, inline: true }
+                { name: "結果", value: `**${chosen.name}**`, inline: false },
             );
 
-        if (roleGiven) {
-            embed.addFields({
-                name: "🎖 ボーナスロール獲得！",
-                value: `> ${roleGiven}`
+        if (gained.length > 0)
+            embed.addFields({ name: "📈 もらえたもの", value: gained.join("\n"), inline: false });
 
+        if (lost.length > 0)
+            embed.addFields({ name: "📉 失ったもの", value: lost.join("\n"), inline: false });
+
+        embed.setFooter({ text: "毎日0時にリセットされます" });
+
+        // 返信は全員に見える（あなたの希望）
+        return interaction.reply({ embeds: [embed] });
+    }
+};
