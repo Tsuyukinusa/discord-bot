@@ -1,164 +1,121 @@
-import {
-    SlashCommandBuilder,
-    EmbedBuilder,
-    PermissionFlagsBits,
-} from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { getGuild, updateGuild } from "../../utils/guildDB.js";
+import { getUser, updateUser } from "../../utils/userDB.js"; // あなたの utils に合わせてパス調整してね
 
 export default {
-    data: new SlashCommandBuilder()
-        .setName("item-create")
-        .setDescription("新しいアイテムを作成します（誰でも使用可能）")
-        .addStringOption(opt =>
-            opt.setName("id")
-                .setDescription("アイテムID（英数字）")
-                .setRequired(true)
-        )
-        .addStringOption(opt =>
-            opt.setName("name")
-                .setDescription("アイテム名")
-                .setRequired(true)
-        )
-        .addStringOption(opt =>
-            opt.setName("description")
-                .setDescription("アイテムの説明 / 効果を表す文章")
-                .setRequired(true)
-        )
-        .addStringOption(opt =>
-            opt.setName("type")
-                .setDescription("アイテムタイプ")
-                .setRequired(true)
-                .addChoices(
-                    { name: "XP増加", value: "xp" },
-                    { name: "VXP増加", value: "vxp" },
-                    { name: "ロール付与", value: "role" },
-                    { name: "ガチャダイヤ", value: "gacha" },
-                    { name: "ペット道具", value: "pet-item" }
-                )
-        )
-        .addIntegerOption(opt =>
-            opt.setName("price")
-                .setDescription("売値（購入するときの値段）")
-                .setRequired(true)
-        )
-        .addIntegerOption(opt =>
-            opt.setName("cost")
-                .setDescription("原価（在庫追加時の必要金額）※ロールは不要")
-                .setRequired(false)
-        )
-        .addRoleOption(opt =>
-            opt.setName("role")
-                .setDescription("ロール付与アイテムの場合のみ設定")
-                .setRequired(false)
-        ),
+  data: new SlashCommandBuilder()
+    .setName("item-stock-add")
+    .setDescription("アイテムの在庫を追加します（原価×個数を支払います）")
+    .addStringOption(opt =>
+      opt
+        .setName("itemid")
+        .setDescription("在庫を追加したいアイテムの ID")
+        .setRequired(true)
+    )
+    .addIntegerOption(opt =>
+      opt
+        .setName("amount")
+        .setDescription("追加する個数")
+        .setRequired(true)
+        .setMinValue(1)
+    ),
 
-    async execute(interaction) {
-        const guildId = interaction.guild.id;
-        const creator = interaction.user.id;
+  async execute(interaction) {
+    const guildId = interaction.guild.id;
+    const userId = interaction.user.id;
+    const itemIdRaw = interaction.options.getString("itemid");
+    const amount = interaction.options.getInteger("amount");
 
-        const id = interaction.options.getString("id");
-        const name = interaction.options.getString("name");
-        const desc = interaction.options.getString("description");
-        const type = interaction.options.getString("type");
-        const price = interaction.options.getInteger("price");
-        const cost = interaction.options.getInteger("cost") ?? null;
-        const role = interaction.options.getRole("role");
+    const itemId = itemIdRaw.trim();
 
-        const db = getGuild(guildId);
-        if (!db.items) db.items = {};
+    // ギルド読み込み
+    const guild = getGuild(guildId);
 
-        // --- IDの重複チェック ---
-        if (db.items[id]) {
-            return interaction.reply({
-                content: "❌ そのIDのアイテムは既に存在します！",
-                ephemeral: true,
-            });
-        }
+    // items の場所を柔軟に探す（guild.items または guild.settings.items）
+    const itemsContainer = guild.items || (guild.settings && guild.settings.items) || {};
 
-        // ==============================
-        // ★ ロールアイテムの特別処理 ★
-        // ==============================
-        if (type === "role") {
-            // 原価不要
-            // 在庫無限
-            // roleId は必須
-            if (!role) {
-                return interaction.reply({
-                    content: "❌ ロール付与アイテムにはロールの指定が必要です！",
-                    ephemeral: true,
-                });
-            }
+    const item = itemsContainer[itemId];
 
-            // 管理権限持ちロールは禁止
-            const perms = role.permissions;
-            if (
-                perms.has(PermissionFlagsBits.Administrator) ||
-                perms.has(PermissionFlagsBits.ManageGuild) ||
-                perms.has(PermissionFlagsBits.ManageRoles)
-            ) {
-                return interaction.reply({
-                    content: "❌ 管理権限を持つロールはアイテムにできません！",
-                    ephemeral: true,
-                });
-            }
+    if (!item) {
+      const notFound = new EmbedBuilder()
+        .setTitle("❌ アイテムが見つかりません")
+        .setDescription(`指定されたアイテム ID \`${itemId}\` は存在しません。`)
+        .setColor(0xff4444)
+        .setTimestamp();
+      return interaction.reply({ embeds: [notFound], ephemeral: true });
+    }
 
-            db.items[id] = {
-                id,
-                name,
-                description: desc,
-                creator,
-                type: "role",
-                price,
-                cost: null,
-                roleId: role.id,
-                stock: "∞", // 無限
-            };
-        }
+    // Roleタイプは在庫無限のため追加できない
+    if (item.type === "role") {
+      const roleErr = new EmbedBuilder()
+        .setTitle("❌ 在庫追加不可")
+        .setDescription("このアイテムは **ロール付与アイテム** のため、在庫を追加する概念がありません。")
+        .setColor(0xffaa00)
+        .setTimestamp();
+      return interaction.reply({ embeds: [roleErr], ephemeral: true });
+    }
 
-        // ==============================
-        // ★ 通常アイテム（xp / vxp / gacha / pet-item）
-        // ==============================
-        else {
-            if (cost === null || cost < 0) {
-                return interaction.reply({
-                    content: "❌ このアイテムには原価（0以上）が必要です！",
-                    ephemeral: true,
-                });
-            }
+    // item.cost（原価）が必須
+    const costPerUnit = Number(item.cost ?? item.priceCost ?? item.origCost ?? 0);
+    if (!costPerUnit || costPerUnit <= 0) {
+      const noCost = new EmbedBuilder()
+        .setTitle("❌ 原価が設定されていません")
+        .setDescription("このアイテムは原価が設定されていないため、在庫追加できません。")
+        .setColor(0xff4444)
+        .setTimestamp();
+      return interaction.reply({ embeds: [noCost], ephemeral: true });
+    }
 
-            db.items[id] = {
-                id,
-                name,
-                description: desc,
-                creator,
-                type,
-                price,
-                cost,
-                roleId: null,
-                stock: 0,
-            };
-        }
+    const totalCost = costPerUnit * amount;
 
-        updateGuild(guildId, db);
+    // ユーザー取得（お財布チェック）
+    const user = getUser(guildId, userId); // getUser(guildId,userId) の形式を使っている前提
+    // ensure numeric fields
+    if (typeof user.balance === "undefined") user.balance = typeof user.money !== "undefined" ? user.money : 0;
+    if (typeof user.balance === "undefined") user.balance = 0;
 
-        // ★ 完了埋め込み
-        const embed = new EmbedBuilder()
-            .setTitle("🛒 アイテムを作成しました！")
-            .setColor("#00ffb7")
-            .addFields(
-                { name: "🪪 ID", value: id },
-                { name: "📛 名前", value: name },
-                { name: "📘 説明", value: desc },
-                { name: "📂 タイプ", value: type },
-                { name: "💵 売値", value: `${price}` },
-                {
-                    name: "🏗 原価",
-                    value: type === "role" ? "なし（ロールは無限）" : `${cost}`,
-                },
-                { name: "📦 在庫", value: type === "role" ? "∞" : "0" }
-            )
-            .setFooter({ text: `作成者：${interaction.user.username}` });
+    if (user.balance < totalCost) {
+      const notEnough = new EmbedBuilder()
+        .setTitle("❌ 所持金不足")
+        .setDescription(`追加に必要な金額 **${totalCost.toLocaleString()}** が足りません。所持金: **${(user.balance || 0).toLocaleString()}**`)
+        .setColor(0xff4444)
+        .setTimestamp();
+      return interaction.reply({ embeds: [notEnough], ephemeral: true });
+    }
 
-        return interaction.reply({ embeds: [embed] });
-    },
+    // 在庫追加処理（itemsContainer が guild 内の参照であることを想定）
+    // itemsContainer は guild の参照ではない可能性があるので、安全に更新してから save
+    // まず guild の正しい場所を決定して更新する
+    if (guild.items) {
+      guild.items[itemId].stock = (guild.items[itemId].stock || 0) + amount;
+    } else if (guild.settings && guild.settings.items) {
+      guild.settings.items[itemId].stock = (guild.settings.items[itemId].stock || 0) + amount;
+    } else {
+      // 両方ないなら作る（普段は起きないはず）
+      guild.items = guild.items || {};
+      guild.items[itemId] = { ...item, stock: amount };
+    }
+
+    // ユーザーから原価×個数を引く（balance フィールドを想定）
+    user.balance -= totalCost;
+    // 互換性のため money フィールドも更新しておく（プロジェクトで money を使っている場合）
+    user.money = user.balance;
+
+    // 保存
+    updateGuild(guildId, guild);
+    updateUser(guildId, userId, user);
+
+    const okEmbed = new EmbedBuilder()
+      .setTitle("✅ 在庫を追加しました")
+      .setColor(0x55cc99)
+      .setDescription(`**${item.name}** (ID: \`${itemId}\`) の在庫を **${amount}** 個追加しました。`)
+      .addFields(
+        { name: "支払った合計", value: `${totalCost.toLocaleString()}`, inline: true },
+        { name: "残高", value: `${user.balance.toLocaleString()}`, inline: true },
+        { name: "新しい在庫数", value: `${( (guild.items && guild.items[itemId]?.stock) || (guild.settings?.items && guild.settings.items[itemId]?.stock) || "?" )}`, inline: false }
+      )
+      .setTimestamp();
+
+    return interaction.reply({ embeds: [okEmbed] });
+  }
 };
