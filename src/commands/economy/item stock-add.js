@@ -92,7 +92,9 @@ export default {
                 { name: "💵 消費金額", value: `${costTotal}` },
                 { name: "📦 現在の在庫", value: `${item.stock}` }
             );
-
-        return interaction.reply({ embeds: [embed] });
+return interaction.reply({
+    embeds: [embed],
+    ephemeral: true   // ← ★ここを追加するだけ！
+});
     }
 };
