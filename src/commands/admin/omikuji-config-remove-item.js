@@ -1,37 +1,68 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { readGuildDB, writeGuildDB } from "../../utils/file.js";
 
 export default {
     data: new SlashCommandBuilder()
-        .setName("omikuji-config-remove-item")
-        .setDescription("おみくじの報酬アイテムを削除します（管理者専用）")
+        .setName("omikuji-config-set-reward")
+        .setDescription("運勢の報酬（お金 / XP / ダイヤ）を変更します")
         .addStringOption(opt =>
             opt.setName("result")
-                .setDescription("運勢キー（例: daikichi, gokukyou）")
+                .setDescription("編集する運勢ID")
                 .setRequired(true)
+                .addChoices(
+                    { name: "大吉", value: "daikichi" },
+                    { name: "中吉", value: "tyuukichi" },
+                    { name: "小吉", value: "syoukichi" },
+                    { name: "吉", value: "kichi" },
+                    { name: "末吉", value: "suekichi" },
+                    { name: "凶", value: "kyou" },
+                    { name: "大凶", value: "daikyou" },
+                    { name: "極凶", value: "gokukyou" },
+                )
         )
-        .addStringOption(opt =>
-            opt.setName("itemid")
-                .setDescription("削除するアイテムID")
-                .setRequired(true)
+        .addIntegerOption(opt =>
+            opt.setName("money").setDescription("お金（省略可能）")
+        )
+        .addIntegerOption(opt =>
+            opt.setName("xp").setDescription("XP（省略可能）")
+        )
+        .addIntegerOption(opt =>
+            opt.setName("diamond").setDescription("ダイヤ（省略可能）")
         ),
 
     async execute(interaction) {
         const guildId = interaction.guild.id;
-        const resultKey = interaction.options.getString("result");
-        const itemId = interaction.options.getString("itemid");
+        const result = interaction.options.getString("result");
+
+        const money = interaction.options.getInteger("money");
+        const xp = interaction.options.getInteger("xp");
+        const diamond = interaction.options.getInteger("diamond");
 
         const db = await readGuildDB();
-        if (!db[guildId] || !db[guildId].omikujiConfig)
-            return interaction.reply("❌ 設定がありません。");
+        if (!db[guildId] || !db[guildId].omikujiConfig) {
+            return interaction.reply({
+                content: "❌ おみくじ設定がありません。",
+                ephemeral: true
+            });
+        }
 
-        const result = db[guildId].omikujiConfig.results[resultKey];
-        if (!result) return interaction.reply("❌ その運勢は存在しません。");
+        const res = db[guildId].omikujiConfig.results[result].rewards;
 
-        result.rewards.items = result.rewards.items.filter(i => i.id !== itemId);
+        if (money !== null) res.money = money;
+        if (xp !== null) res.xp = xp;
+        if (diamond !== null) res.diamond = diamond;
 
         await writeGuildDB(db);
 
-        return interaction.reply(`🗑️ **${result.name}** からアイテム **${itemId}** を削除しました。`);
+        const embed = new EmbedBuilder()
+            .setTitle("💰 報酬を更新しました")
+            .addFields(
+                { name: "Money", value: `${res.money}`, inline: true },
+                { name: "XP", value: `${res.xp}`, inline: true },
+                { name: "Diamond", value: `${res.diamond}`, inline: true },
+            )
+            .setColor("#00c8ff");
+
+        return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 };
