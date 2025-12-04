@@ -1,5 +1,5 @@
 // commands/admin/omikuji-config-set-reward.js
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { readGuildDB, writeGuildDB } from "../../utils/file.js";
 
 export default {
@@ -46,6 +46,7 @@ export default {
         const diamond = interaction.options.getInteger("diamond");
 
         const db = await readGuildDB();
+
         if (!db[guildId] || !db[guildId].omikujiConfig) {
             return interaction.reply({
                 content: "❌ おみくじ設定がありません。",
@@ -61,9 +62,21 @@ export default {
 
         await writeGuildDB(db);
 
+        // 埋め込み作成
+        const embed = new EmbedBuilder()
+            .setTitle("🎯 報酬設定を更新しました")
+            .setDescription(`運勢ID：\`${result}\``)
+            .setColor("#4caf50")
+            .addFields(
+                { name: "💰 Money", value: `${res.money}`, inline: true },
+                { name: "⭐ XP", value: `${res.xp}`, inline: true },
+                { name: "💎 Diamond", value: `${res.diamond}`, inline: true }
+            )
+            .setTimestamp();
+
         return interaction.reply({
-            content: `💰 報酬を更新しました！\n- money: ${res.money}\n- xp: ${res.xp}\n- diamond: ${res.diamond}`,
-            ephemeral: false
+            embeds: [embed],
+            ephemeral: true // ← ここがポイント（管理者しか見えない）
         });
     }
 };
