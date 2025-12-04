@@ -1,146 +1,155 @@
 import {
     SlashCommandBuilder,
-    ModalBuilder,
-    TextInputBuilder,
-    ActionRowBuilder,
-    TextInputStyle,
-    PermissionFlagsBits,
-    EmbedBuilder
+    EmbedBuilder,
+    PermissionFlagsBits
 } from "discord.js";
-import { getGuild, updateGuild } from "../../utils/guildDB.js";
+import { readGuildDB, writeGuildDB } from "../../utils/file.js";
 
 export default {
     data: new SlashCommandBuilder()
         .setName("item-create")
-        .setDescription("新しいアイテムを作成します（誰でも）"),
+        .setDescription("新しいアイテムを作成します（誰でも使用可能）")
+        .addStringOption(opt =>
+            opt.setName("name")
+                .setDescription("アイテム名")
+                .setRequired(true)
+        )
+        .addStringOption(opt =>
+            opt.setName("id")
+                .setDescription("アイテムID（英数字）")
+                .setRequired(true)
+        )
+        .addStringOption(opt =>
+            opt.setName("description")
+                .setDescription("効果説明文")
+                .setRequired(true)
+        )
+        .addStringOption(opt =>
+            opt.setName("type")
+                .setDescription("アイテムの種類")
+                .setRequired(true)
+                .addChoices(
+                    { name: "XP増加", value: "xp" },
+                    { name: "VXP増加", value: "vxp" },
+                    { name: "ロール付与", value: "role" },
+                    { name: "ガチャダイヤ", value: "gacha" },
+                    { name: "ペット用アイテム", value: "pet" }
+                )
+        )
+        .addIntegerOption(opt =>
+            opt.setName("sellprice")
+                .setDescription("売値")
+                .setRequired(true)
+                .setMinValue(0)
+        )
+        .addIntegerOption(opt =>
+            opt.setName("cost")
+                .setDescription("原価（ロール以外必須）")
+                .setRequired(false)
+        )
+        .addIntegerOption(opt =>
+            opt.setName("effect")
+                .setDescription("効果量（数字）")
+                .setRequired(true)
+        )
+        .addRoleOption(opt =>
+            opt.setName("role")
+                .setDescription("ロール付与アイテムなら設定")
+                .setRequired(false)
+        ),
 
     async execute(interaction) {
-        const modal = new ModalBuilder()
-            .setCustomId("itemCreateModal")
-            .setTitle("🛒 アイテム作成");
-
-        const nameInput = new TextInputBuilder()
-            .setCustomId("itemName")
-            .setLabel("アイテム名")
-            .setRequired(true)
-            .setStyle(TextInputStyle.Short);
-
-        const idInput = new TextInputBuilder()
-            .setCustomId("itemId")
-            .setLabel("アイテムID（例: A001）")
-            .setRequired(true)
-            .setStyle(TextInputStyle.Short);
-
-        const typeInput = new TextInputBuilder()
-            .setCustomId("itemType")
-            .setLabel("効果タイプ（money / xp / role）")
-            .setRequired(true)
-            .setStyle(TextInputStyle.Short);
-
-        const sellInput = new TextInputBuilder()
-            .setCustomId("itemPrice")
-            .setLabel("売値（数字）")
-            .setRequired(true)
-            .setStyle(TextInputStyle.Short);
-
-        const descInput = new TextInputBuilder()
-            .setCustomId("itemDesc")
-            .setLabel("効果を表す説明文")
-            .setRequired(true)
-            .setStyle(TextInputStyle.Paragraph);
-
-        modal.addComponents(
-            new ActionRowBuilder().addComponents(nameInput),
-            new ActionRowBuilder().addComponents(idInput),
-            new ActionRowBuilder().addComponents(typeInput),
-            new ActionRowBuilder().addComponents(sellInput),
-            new ActionRowBuilder().addComponents(descInput)
-        );
-
-        await interaction.showModal(modal);
-    },
-
-    async modal(interaction) {
-        if (interaction.customId !== "itemCreateModal") return;
-
         const guildId = interaction.guild.id;
-        const guild = getGuild(guildId);
+        const userId = interaction.user.id;
 
-        if (!guild.items) guild.items = {};
+        const name = interaction.options.getString("name");
+        const itemId = interaction.options.getString("id");
+        const description = interaction.options.getString("description");
+        const type = interaction.options.getString("type");
+        const sellPrice = interaction.options.getInteger("sellprice");
+        const cost = interaction.options.getInteger("cost");
+        const effectValue = interaction.options.getInteger("effect");
+        const role = interaction.options.getRole("role");
 
-        const name = interaction.fields.getTextInputValue("itemName");
-        const itemId = interaction.fields.getTextInputValue("itemId");
-        const type = interaction.fields.getTextInputValue("itemType").toLowerCase();
-        const price = parseInt(interaction.fields.getTextInputValue("itemPrice"));
-        const description = interaction.fields.getTextInputValue("itemDesc");
+        const db = await readGuildDB();
 
-        // ==== バリデーション ====
-        if (guild.items[itemId]) {
+        if (!db[guildId]) db[guildId] = {};
+        if (!db[guildId].items) db[guildId].items = {};
+
+        // ID重複チェック
+        if (db[guildId].items[itemId]) {
             return interaction.reply({
-                content: "❌ そのアイテムIDはすでに存在します。",
+                content: "❌ そのアイテムIDはすでに使われています。",
                 ephemeral: true
             });
         }
 
-        if (!["money", "xp", "role"].includes(type)) {
-            return interaction.reply({
-                content: "❌ 効果タイプは **money / xp / role** のいずれかを入力してください。",
-                ephemeral: true
-            });
-        }
-
-        if (isNaN(price) || price < 0) {
-            return interaction.reply({
-                content: "❌ 売値は 0 以上の数字を入力してください。",
-                ephemeral: true
-            });
-        }
-
-        // ========= ROLE アイテムの特別処理 =========
-        let cost = 0;
-        let stock = -1; // -1 = 無限
-
+        // role アイテムの特別ルール
         if (type === "role") {
-            const forbidden = ["Admin", "Administrator", "Moderator", "Mod"];
-
-            if (forbidden.some(r => name.toLowerCase().includes(r.toLowerCase()))) {
+            if (!role) {
                 return interaction.reply({
-                    content: "❌ 管理者・モデレーターロールはアイテムにできません。",
+                    content: "❌ ロール付与アイテムにはロールを指定してください。",
                     ephemeral: true
                 });
             }
-        } else {
-            // money or xp → 原価が必要
-            cost = Math.floor(price * 0.6); // 原価は売値の6割など自由に調整OK
-            stock = 0;
+
+            // 管理者ロール禁止
+            if (
+                role.permissions.has(PermissionFlagsBits.Administrator) ||
+                role.permissions.has(PermissionFlagsBits.ManageGuild) ||
+                role.managed === true
+            ) {
+                return interaction.reply({
+                    content: "❌ 管理者・特別ロールは付与できません。",
+                    ephemeral: true
+                });
+            }
         }
 
-        guild.items[itemId] = {
+        // 原価チェック（ロールは cost 不要）
+        if (type !== "role") {
+            if (cost === null || cost < 0) {
+                return interaction.reply({
+                    content: "❌ 原価が必要です（0以上）。",
+                    ephemeral: true
+                });
+            }
+        }
+
+        // 保存データ作成
+        db[guildId].items[itemId] = {
             name,
-            itemId,
-            type,
-            price,
-            cost,
-            stock,
             description,
-            creator: interaction.user.id,
+            type,
+            sellPrice,
+            cost: type === "role" ? null : cost,
+            stock: type === "role" ? null : 0,
+            effectValue,
+            roleId: type === "role" ? role.id : null,
+            creator: userId,
             createdAt: Date.now()
         };
 
-        updateGuild(guildId, guild);
+        await writeGuildDB(db);
 
-        // ===== 埋め込み返信 =====
+        // 返信
         const embed = new EmbedBuilder()
-            .setTitle("🛒 アイテム作成完了")
-            .setColor("#00ffb7")
+            .setColor("#00ff9d")
+            .setTitle("🛠 アイテム作成完了")
             .addFields(
-                { name: "📌 アイテム名", value: name },
+                { name: "📝 名前", value: name },
                 { name: "🆔 ID", value: itemId },
-                { name: "🎯 効果タイプ", value: type },
-                { name: "💵 売値", value: `${price}` },
-                { name: "📦 在庫", value: stock === -1 ? "∞（ロールアイテム）" : `${stock}` },
-                { name: "📝 効果説明", value: description },
+                { name: "📄 説明", value: description },
+                { name: "🔧 種類", value: type },
+                { name: "💰 売値", value: `${sellPrice}` },
+                { name: "💵 原価", value: type === "role" ? "なし（ロールは無限）" : `${cost}` },
+                { name: "✨ 効果値", value: `${effectValue}` },
+                { name: "🎨 クリエイター", value: `<@${userId}>` }
             );
+
+        if (type === "role") {
+            embed.addFields({ name: "🎖 付与ロール", value: `<@&${role.id}>` });
+        }
 
         return interaction.reply({ embeds: [embed] });
     }
