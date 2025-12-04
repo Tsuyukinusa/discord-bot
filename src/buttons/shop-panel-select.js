@@ -4,57 +4,62 @@ import {
     ButtonBuilder,
     ButtonStyle
 } from "discord.js";
-import { readGuildDB, writeGuildDB } from "../../utils/file.js";
+import { readGuildDB, writeGuildDB } from "../../../utils/file.js";
 
 export default {
-    data: {
-        name: "shop-panel-select"
-    },
+    customId: "shop-panel-select",
 
     async execute(interaction) {
         const guildId = interaction.guild.id;
-        const channel = interaction.channel;
-
-        const selectedIds = interaction.values; // 選ばれたアイテムID配列
+        const channelId = interaction.channel.id;
 
         const db = await readGuildDB();
         const items = db[guildId].items;
 
-        // --- 埋め込み作成 ---
+        const selected = interaction.values; // 選択された itemID の配列
+
+        // --- 埋め込み生成 ---
         const embed = new EmbedBuilder()
             .setTitle("🛒 アイテムショップ")
-            .setDescription("購入したいアイテムを選んでください！")
-            .setColor(0x00b0f4)
-            .addFields(
-                selectedIds.map(id => ({
-                    name: items[id].name,
-                    value: `💰 **価格:** ${items[id].price}\n📦 **在庫:** ${items[id].stock}`,
-                }))
-            );
+            .setDescription("以下のアイテムを購入できます！")
+            .setColor(0x00BFFF);
 
-        // --- 購入ボタン（1メッセージ共通） ---
-        const row = new ActionRowBuilder().addComponents(
+        selected.forEach((id) => {
+            const item = items[id];
+            embed.addFields({
+                name: item.name,
+                value: `💴価格: **${item.price}**\n📦在庫: **${item.stock ?? 0}**`,
+                inline: false,
+            });
+        });
+
+        // --- 購入ボタン（後で実装） ---
+        const buttonRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId("shop-buy")
                 .setLabel("購入する")
                 .setStyle(ButtonStyle.Primary)
         );
 
-        // チャンネルにショップを送信
-        const message = await channel.send({
+        // --- 公開チャンネルに送信 ---
+        const msg = await interaction.channel.send({
             embeds: [embed],
-            components: [row]
+            components: [buttonRow]
         });
 
-        // DB に保存（後で在庫更新などに使う）
-        db[guildId].shopPanels[message.id] = {
-            items: selectedIds
+        // --- DBに保存（どのパネルが何を扱うか） ---
+        if (!db[guildId].shopPanels) db[guildId].shopPanels = {};
+
+        db[guildId].shopPanels[msg.id] = {
+            items: selected,
+            channelId,
         };
+
         await writeGuildDB(db);
 
-        await interaction.reply({
+        await interaction.update({
             content: "✅ ショップパネルを作成しました！",
-            ephemeral: true
+            components: []
         });
     }
 };
