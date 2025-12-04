@@ -1,54 +1,49 @@
 import {
     SlashCommandBuilder,
-    EmbedBuilder,
     ActionRowBuilder,
     StringSelectMenuBuilder
 } from "discord.js";
-import { readGuildDB, writeGuildDB } from "../../utils/file.js";
+import { readGuildDB } from "../../utils/file.js";
 
 export default {
     data: new SlashCommandBuilder()
         .setName("shop-panel")
-        .setDescription("ショップパネルを作成します（最大 20 アイテム）"),
+        .setDescription("ショップパネルを作成します（最大20アイテム）"),
 
     async execute(interaction) {
         const guildId = interaction.guild.id;
-        const channelId = interaction.channel.id;
 
         const db = await readGuildDB();
         if (!db[guildId]) db[guildId] = {};
         if (!db[guildId].items) db[guildId].items = {};
-        if (!db[guildId].shopPanels) db[guildId].shopPanels = {};
 
         const items = db[guildId].items;
 
-        // アイテムが存在しない場合
         if (Object.keys(items).length === 0) {
             return interaction.reply({
-                content: "❌ まだアイテムがありません。先に `/item create` で作成してください。",
+                content: "❌ まだアイテムがありません。",
                 ephemeral: true
             });
         }
 
-        // --- アイテム選択メニュー ---
+        // 選択メニュー
         const menu = new StringSelectMenuBuilder()
             .setCustomId("shop-panel-select")
-            .setPlaceholder("ショップに並べるアイテムを選んでください（最大20個）")
+            .setPlaceholder("並べるアイテムを選択（最大20）")
             .setMinValues(1)
             .setMaxValues(Math.min(20, Object.keys(items).length))
             .addOptions(
                 Object.entries(items).map(([id, item]) => ({
                     label: item.name,
                     value: id,
-                    description: `在庫: ${item.stock ?? 0}`,
+                    description: `在庫: ${item.stock ?? "∞"}`
                 }))
             );
 
         const row = new ActionRowBuilder().addComponents(menu);
 
-        // --- 返信（選択待ち） ---
         await interaction.reply({
-            content: "🛒 **ショップに並べるアイテムを選んでください！**",
+            content: "🛒 ショップに並べるアイテムを選んでください！",
             components: [row],
             ephemeral: true
         });
