@@ -3,7 +3,7 @@ import { EmbedBuilder } from "discord.js";
 import { readGuildDB, writeGuildDB } from "../../utils/file.js";
 
 export default {
-    customId: /^shop-buy-.+$/, // ← shop-buy-◯◯ 形式にマッチ
+    customId: /^shop-buy-.+$/, // shop-buy-◯◯ にマッチ
 
     async execute(interaction) {
         const guildId = interaction.guild.id;
@@ -23,35 +23,62 @@ export default {
 
         const item = db[guildId].items[itemId];
 
-        // --- 在庫チェック（ロール以外） ---
-        if (item.type !== "role") {
-            if (item.stock <= 0) {
-                return interaction.reply({
-                    content: "❌ 在庫切れです！",
-                    ephemeral: true
-                });
-            }
+        // --- ユーザーデータ ---
+        if (!db[guildId].users) db[guildId].users = {};
+        if (!db[guildId].users[userId]) {
+            db[guildId].users[userId] = {
+                coins: 0,
+                inventory: {}
+            };
         }
 
-        // ★ コインや通貨処理は後で追加できる
+        const userData = db[guildId].users[userId];
 
-        // --- 在庫減らす（ロール以外） ---
+        // --- 通貨チェック ---
+        if (userData.coins < item.sellPrice) {
+            return interaction.reply({
+                content: `❌ 所持金が足りません！（必要: ${item.sellPrice}）`,
+                ephemeral: true
+            });
+        }
+
+        // --- 在庫チェック（ロールは無限） ---
+        if (item.type !== "role" && item.stock <= 0) {
+            return interaction.reply({
+                content: "❌ 在庫切れです！",
+                ephemeral: true
+            });
+        }
+
+        // --- 購入処理 ---
+        userData.coins -= item.sellPrice;
+
+        // --- 在庫減少（ロール以外） ---
         if (item.type !== "role") {
             item.stock -= 1;
         }
 
+        // --- インベントリへ追加 ---
+        if (!userData.inventory[itemId]) {
+            userData.inventory[itemId] = 0;
+        }
+        userData.inventory[itemId] += 1;
+
         await writeGuildDB(db);
 
-        // --- 購入成功メッセージ（本人にだけ見える） ---
+        // --- メッセージ ---
         const embed = new EmbedBuilder()
             .setColor("#00ff8c")
             .setTitle("🛒 購入完了！")
-            .setDescription(`**${item.name}** を購入しました！`)
-            .setFooter({ text: "購入内容はあなただけに表示されています。" });
+            .setDescription(`**${item.name}** を購入してインベントリに追加しました！`)
+            .addFields(
+                { name: "現在の所持金", value: `${userData.coins} コイン` }
+            )
+            .setFooter({ text: "このメッセージはあなただけに見えます。" });
 
         return interaction.reply({
             embeds: [embed],
-            ephemeral: true  // ← これで本人だけに見える！
+            ephemeral: true
         });
     }
 };
