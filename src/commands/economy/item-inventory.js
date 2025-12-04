@@ -47,6 +47,9 @@ export default {
             .setDescription(list)
             .setTimestamp();
 
-        return interaction.reply({ embeds: [embed] });
+        return interaction.reply({
+    embeds: [embed],
+    ephemeral: true   // ← ★ここを追加するだけ！
+});
     }
 };
