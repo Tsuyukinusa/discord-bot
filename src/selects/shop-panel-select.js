@@ -12,27 +12,35 @@ export default {
     async execute(interaction) {
         const guildId = interaction.guild.id;
         const channel = interaction.channel;
-        const selected = interaction.values; // ← 選択された itemId 一覧
 
         const db = await readGuildDB();
-        const items = db[guildId].items;
+        if (!db[guildId]) db[guildId] = {};
+        if (!db[guildId].items) db[guildId].items = {};
+        if (!db[guildId].shopPanels) db[guildId].shopPanels = {};
 
-        // --- 埋め込み生成 ---
+        const selectedIds = interaction.values; // ← 選択されたID配列
+
+        // 選ばれたアイテム
+        const items = selectedIds.map(id => db[guildId].items[id]);
+
+        // --- ショップ埋め込み ---
         const embed = new EmbedBuilder()
-            .setColor("#00b7ff")
+            .setColor("#00c8ff")
             .setTitle("🛒 アイテムショップ")
-            .setDescription("好きなアイテムを購入できます！");
+            .setDescription("以下のアイテムが購入できます！");
 
-        for (const id of selected) {
-            const item = items[id];
+        items.forEach(item => {
             embed.addFields({
-                name: `🎁 ${item.name}`,
-                value: `💰 **${item.sellPrice} コイン**\n📦 在庫: ${item.stock ?? "∞"}\n📝 ${item.description}`,
+                name: `✨ ${item.name}`,
+                value:
+                    `📄 ${item.description}\n` +
+                    `💰 **価格:** ${item.sellPrice}\n` +
+                    (item.stock !== null ? `📦 在庫: ${item.stock}` : `♾ 在庫: 無限`),
                 inline: false
             });
-        }
+        });
 
-        // 購入ボタン（押したら item-buy に飛ぶ）
+        // --- 購入ボタン ---
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId("shop-buy")
@@ -40,25 +48,23 @@ export default {
                 .setStyle(ButtonStyle.Primary)
         );
 
-        // パネルをチャンネルに送信
+        // チャンネルにショップを設置
         const msg = await channel.send({
             embeds: [embed],
             components: [row]
         });
 
-        // DB 保存（あとで在庫更新とかに使う）
-        if (!db[guildId].shopPanels) db[guildId].shopPanels = {};
+        // 保存（パネル情報）
         db[guildId].shopPanels[msg.id] = {
-            items: selected,
-            channelId: channel.id
+            items: selectedIds
         };
 
         await writeGuildDB(db);
 
-        // ユーザーに返信（ephemeral）
-        return interaction.reply({
-            content: "✅ ショップパネルを作成しました！",
-            ephemeral: true
+        // 選択メニューへは完了通知だけ（表示しないタイプ）
+        return interaction.update({
+            content: "ショップパネルを作成しました！",
+            components: []
         });
     }
 };
