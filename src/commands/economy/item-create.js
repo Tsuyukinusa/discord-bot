@@ -24,6 +24,14 @@ export default {
                 .setDescription("効果説明文")
                 .setRequired(true)
         )
+
+        // ★追加：効果発動時のメッセージ
+        .addStringOption(opt => 
+            opt.setName("effectmessage")
+                .setDescription("効果が発動した時に表示されるメッセージ")
+                .setRequired(true)   // ここは必要なら false にしてもいい
+        ) // ← ★追加
+
         .addStringOption(opt =>
             opt.setName("type")
                 .setDescription("アイテムの種類")
@@ -65,6 +73,9 @@ export default {
         const name = interaction.options.getString("name");
         const itemId = interaction.options.getString("id");
         const description = interaction.options.getString("description");
+
+        const effectMessage = interaction.options.getString("effectmessage"); // ← ★追加
+
         const type = interaction.options.getString("type");
         const sellPrice = interaction.options.getInteger("sellprice");
         const cost = interaction.options.getInteger("cost");
@@ -76,7 +87,6 @@ export default {
         if (!db[guildId]) db[guildId] = {};
         if (!db[guildId].items) db[guildId].items = {};
 
-        // ID重複チェック
         if (db[guildId].items[itemId]) {
             return interaction.reply({
                 content: "❌ そのアイテムIDはすでに使われています。",
@@ -84,7 +94,6 @@ export default {
             });
         }
 
-        // role アイテムの特別ルール
         if (type === "role") {
             if (!role) {
                 return interaction.reply({
@@ -93,7 +102,6 @@ export default {
                 });
             }
 
-            // 管理者ロール禁止
             if (
                 role.permissions.has(PermissionFlagsBits.Administrator) ||
                 role.permissions.has(PermissionFlagsBits.ManageGuild) ||
@@ -106,7 +114,6 @@ export default {
             }
         }
 
-        // 原価チェック（ロールは cost 不要）
         if (type !== "role") {
             if (cost === null || cost < 0) {
                 return interaction.reply({
@@ -116,10 +123,11 @@ export default {
             }
         }
 
-        // 保存データ作成
+        // ★保存データに effectMessage を追加
         db[guildId].items[itemId] = {
             name,
             description,
+            effectMessage, // ← ★追加
             type,
             sellPrice,
             cost: type === "role" ? null : cost,
@@ -132,7 +140,6 @@ export default {
 
         await writeGuildDB(db);
 
-        // 返信
         const embed = new EmbedBuilder()
             .setColor("#00ff9d")
             .setTitle("🛠 アイテム作成完了")
@@ -140,6 +147,7 @@ export default {
                 { name: "📝 名前", value: name },
                 { name: "🆔 ID", value: itemId },
                 { name: "📄 説明", value: description },
+                { name: "🎬 発動メッセージ", value: effectMessage }, // ← ★追加
                 { name: "🔧 種類", value: type },
                 { name: "💰 売値", value: `${sellPrice}` },
                 { name: "💵 原価", value: type === "role" ? "なし（ロールは無限）" : `${cost}` },
