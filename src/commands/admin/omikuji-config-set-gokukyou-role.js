@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { readGuildDB, writeGuildDB } from "../../utils/file.js";
 
 export default {
@@ -23,15 +23,36 @@ export default {
         const role = interaction.options.getRole("role");
 
         const db = await readGuildDB();
-        if (!db[guildId] || !db[guildId].omikujiConfig)
-            return interaction.reply("❌ 設定がありません。");
+        if (!db[guildId] || !db[guildId].omikujiConfig) {
 
+            const errorEmbed = new EmbedBuilder()
+                .setTitle("❌ 設定エラー")
+                .setDescription("おみくじ設定が見つかりません。まず `/omikuji-config-init` を実行してください。")
+                .setColor("Red");
+
+            return interaction.reply({
+                embeds: [errorEmbed],
+                ephemeral: true
+            });
+        }
+
+        // 設定保存
         db[guildId].omikujiConfig.gokukyouRoleRewards[count] = role.id;
-
         await writeGuildDB(db);
 
-        return interaction.reply(
-            `✨ 極凶 **${count}回** でロール **${role.name}** が付くように設定しました！`
-        );
+        // 成功メッセージ
+        const embed = new EmbedBuilder()
+            .setTitle("✨ 極凶ロール設定を更新しました")
+            .setColor("Purple")
+            .addFields(
+                { name: "極凶を引いた回数", value: `${count} 回`, inline: true },
+                { name: "付与されるロール", value: `${role}`, inline: true }
+            )
+            .setTimestamp();
+
+        return interaction.reply({
+            embeds: [embed],
+            ephemeral: true
+        });
     }
 };
