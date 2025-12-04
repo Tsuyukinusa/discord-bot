@@ -1,0 +1,34 @@
+import { SlashCommandBuilder } from "discord.js";
+import { readGuildDB, writeGuildDB } from "../../utils/file.js";
+
+export default {
+    data: new SlashCommandBuilder()
+        .setName("omikuji-config-remove-gokukyou-role")
+        .setDescription("極凶ロール設定を削除します（管理者専用）")
+        .addIntegerOption(opt =>
+            opt.setName("count")
+                .setDescription("極凶を引いた回数")
+                .setRequired(true)
+                .setMinValue(1)
+        ),
+
+    async execute(interaction) {
+        const guildId = interaction.guild.id;
+        const count = interaction.options.getInteger("count");
+
+        const db = await readGuildDB();
+        if (!db[guildId] || !db[guildId].omikujiConfig)
+            return interaction.reply("❌ 設定がありません。");
+
+        if (!db[guildId].omikujiConfig.gokukyouRoleRewards[count])
+            return interaction.reply("❌ その回数のロール設定はありません。");
+
+        delete db[guildId].omikujiConfig.gokukyouRoleRewards[count];
+
+        await writeGuildDB(db);
+
+        return interaction.reply(
+            `🗑️ 極凶 **${count}回** のロール設定を削除しました。`
+        );
+    }
+};
