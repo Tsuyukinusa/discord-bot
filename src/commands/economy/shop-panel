@@ -1,0 +1,63 @@
+import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import { readGuildDB } from "../../utils/file.js";
+
+export default {
+    data: new SlashCommandBuilder()
+        .setName("shop-panel")
+        .setDescription("このチャンネルにアイテムショップを表示します"),
+
+    async execute(interaction) {
+        const guildId = interaction.guild.id;
+        const db = await readGuildDB();
+        const shopIds = db[guildId].shopItems || [];
+        const items = db[guildId].items || {};
+
+        const embed = new EmbedBuilder()
+            .setTitle("🛒 アイテムショップ")
+            .setColor("#00aaff");
+
+        let description = "";
+
+        for (const id of shopIds) {
+            const item = items[id];
+            if (!item) continue;
+
+            description +=
+                `**${item.name}**\n` +
+                `💴 **${item.sellPrice}**\n` +
+                `📦 在庫：**${item.stock ?? 0}**\n` +
+                `⠀\n`; // ← 余白
+        }
+
+        embed.setDescription(description || "現在ショップに商品がありません。");
+
+        // 20アイテム → 20個のボタンを自動生成
+        const rows = [];
+        let row = new ActionRowBuilder();
+
+        for (let i = 0; i < shopIds.length; i++) {
+            const id = shopIds[i];
+
+            // ボタン
+            row.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`buy_${id}`)
+                    .setLabel(items[id].name)
+                    .setStyle(ButtonStyle.Primary)
+            );
+
+            // ボタンは1行5つまで
+            if ((i + 1) % 5 === 0) {
+                rows.push(row);
+                row = new ActionRowBuilder();
+            }
+        }
+
+        if (row.components.length > 0) rows.push(row);
+
+        await interaction.reply({
+            embeds: [embed],
+            components: rows
+        });
+    }
+};
