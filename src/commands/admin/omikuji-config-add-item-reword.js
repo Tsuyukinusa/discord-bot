@@ -1,11 +1,11 @@
 // commands/admin/omikuji-config-add-item-reward.js
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { readGuildDB, writeGuildDB } from "../../utils/file.js";
 
 export default {
     data: new SlashCommandBuilder()
         .setName("omikuji-config-add-item-reward")
-        .setDescription("報酬アイテムを追加します")
+        .setDescription("報酬アイテムを追加します（管理者専用）")
         .addStringOption(o =>
             o.setName("result")
                 .setDescription("対象運勢")
@@ -43,8 +43,13 @@ export default {
         const db = await readGuildDB();
 
         if (!db[guildId] || !db[guildId].omikujiConfig) {
+            const embed = new EmbedBuilder()
+                .setColor("Red")
+                .setTitle("❌ 設定エラー")
+                .setDescription("おみくじ設定がありません。");
+
             return interaction.reply({
-                content: "❌ 設定がありません。",
+                embeds: [embed],
                 ephemeral: true
             });
         }
@@ -56,9 +61,18 @@ export default {
 
         await writeGuildDB(db);
 
+        const embed = new EmbedBuilder()
+            .setColor("Green")
+            .setTitle("📦 報酬アイテム追加")
+            .addFields(
+                { name: "運勢", value: resultId, inline: true },
+                { name: "アイテムID", value: itemId, inline: true },
+                { name: "数量", value: `${amount}`, inline: true }
+            );
+
         return interaction.reply({
-            content: `📦 報酬アイテム **${itemId} x${amount}** を追加しました！`,
-            ephemeral: false
+            embeds: [embed],
+            ephemeral: true
         });
     }
 };
