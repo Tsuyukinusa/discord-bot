@@ -17,17 +17,29 @@ export default {
                 .setRequired(true)
         )
         .addIntegerOption(o =>
-            o.setName("volatility")
-                .setDescription("株価変動率（±%）")
+            o.setName("min")
+                .setDescription("最小変動率（%）")
                 .setRequired(true)
-                .setMinValue(1)
+        )
+        .addIntegerOption(o =>
+            o.setName("max")
+                .setDescription("最大変動率（%）")
+                .setRequired(true)
         ),
 
     async execute(interaction) {
         const guildId = interaction.guild.id;
         const id = interaction.options.getString("id");
         const name = interaction.options.getString("name");
-        const volatility = interaction.options.getInteger("volatility");
+        const min = interaction.options.getInteger("min");
+        const max = interaction.options.getInteger("max");
+
+        if (min > max) {
+            return interaction.reply({
+                content: "❌ 最小値は最大値以下にしてください。",
+                ephemeral: true
+            });
+        }
 
         const db = await readGuildDB();
         if (!db[guildId]) db[guildId] = {};
@@ -42,7 +54,10 @@ export default {
 
         db[guildId].stocks[id] = {
             name,
-            volatility
+            volatility: {
+                min,
+                max
+            }
         };
 
         await writeGuildDB(db);
@@ -53,7 +68,7 @@ export default {
             .addFields(
                 { name: "ID", value: id },
                 { name: "会社名", value: name },
-                { name: "変動率", value: `±${volatility}%` }
+                { name: "変動率範囲", value: `${min}% ～ ${max}%` }
             );
 
         return interaction.reply({
