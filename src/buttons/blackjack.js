@@ -1,7 +1,9 @@
 // src/buttons/blackjack.js
+import { EmbedBuilder } from "discord.js";
 import { playHit, playStand } from "../utils/blackjackCore.js";
 import { createBlackjackEmbed } from "../utils/blackjackEmbed.js";
 import { blackjackButtons } from "../utils/blackjackButtons.js";
+import { getGame } from "../utils/blackjackStore.js";
 
 export default {
   customId: /^bj-(hit|stand)$/,
@@ -11,6 +13,21 @@ export default {
     const userId = interaction.user.id;
     const action = interaction.customId.split("-")[1];
 
+    const game = getGame(guildId, userId);
+
+    // ❌ ゲームがない or 他人のゲーム
+    if (!game) {
+      const embed = new EmbedBuilder()
+        .setColor("Red")
+        .setTitle("❌ 操作できません")
+        .setDescription("このブラックジャックはあなたのゲームではありません。");
+
+      return interaction.reply({
+        embeds: [embed],
+        ephemeral: true
+      });
+    }
+
     let result;
     if (action === "hit") {
       result = playHit(guildId, userId);
@@ -18,26 +35,19 @@ export default {
       result = playStand(guildId, userId);
     }
 
-    // ❌ エラー処理
     if (result.error) {
-      return interaction.followUp({
-        content: `❌ ${result.error}`,
-        ephemeral: true
-      });
-    }
+      const embed = new EmbedBuilder()
+        .setColor("Red")
+        .setDescription(`❌ ${result.error}`);
 
-    // ❌ 他人操作防止
-    if (result.playerId !== userId) {
-      return interaction.followUp({
-        content: "❌ このブラックジャックはあなたのゲームではありません。",
+      return interaction.reply({
+        embeds: [embed],
         ephemeral: true
       });
     }
 
     const embed = createBlackjackEmbed(result);
-    const components = result.finished
-      ? []
-      : [blackjackButtons(false)];
+    const components = result.finished ? [] : [blackjackButtons(false)];
 
     await interaction.update({
       embeds: [embed],
