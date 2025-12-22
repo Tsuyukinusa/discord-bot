@@ -1,57 +1,33 @@
-// utils/blackjackEmbed.js
 import { EmbedBuilder } from "discord.js";
 import { calcHand } from "./blackjackLogic.js";
 
-function renderHand(cards) {
-  return cards.map(c => `${c.rank}${c.suit}`).join(" ");
+function formatHand(hand) {
+  return `${hand.map(c => c.label).join(" ")}  (${calcHand(hand)})`;
 }
 
 export function createBlackjackEmbed(game) {
+  const playerHand = game.hands[game.currentHand];
+  const dealerHand = game.finished
+    ? formatHand(game.dealer)
+    : `${game.dealer[0].label} ❓`;
+
   const embed = new EmbedBuilder()
-    .setColor("#2ecc71")
+    .setColor(game.finished ? "#ffcc00" : "#00c3ff")
     .setTitle("🃏 Blackjack")
-    .setFooter({ text: `Bet: ${game.bet}` });
+    .addFields(
+      { name: "あなた", value: formatHand(playerHand), inline: false },
+      { name: "ディーラー", value: dealerHand, inline: false },
+      { name: "BET", value: `${game.bet}`, inline: true }
+    );
 
-  // ---- プレイヤー手札 ----
-  game.hands.forEach((hand, index) => {
-    const total = calcHand(hand);
-    const active = game.currentHand === index && !game.finished;
-
-    embed.addFields({
-      name: `あなたの手札 ${game.split ? `(Hand ${index + 1})` : ""}${active ? " ←" : ""}`,
-      value: `${renderHand(hand)}\n**合計: ${total}**`,
-      inline: false
-    });
-  });
-
-  // ---- ディーラー ----
-  if (game.finished) {
-    embed.addFields({
-      name: "ディーラー",
-      value: `${renderHand(game.dealer)}\n**合計: ${calcHand(game.dealer)}**`,
-      inline: false
-    });
-  } else {
-    embed.addFields({
-      name: "ディーラー",
-      value: `${game.dealer[0].rank}${game.dealer[0].suit} ❓`,
-      inline: false
-    });
-  }
-
-  // ---- 結果 ----
   if (game.finished) {
     const resultText = {
       win: "🎉 勝ち！",
-      lose: "💀 負け…",
+      lose: "💥 負け…",
       push: "🤝 引き分け"
-    };
+    }[game.result];
 
-    embed.addFields({
-      name: "結果",
-      value: resultText[game.result] || "―",
-      inline: false
-    });
+    embed.addFields({ name: "結果", value: resultText });
   }
 
   return embed;
