@@ -9,17 +9,24 @@ export function playCoinflip({
 }) {
   const user = getUser(guildId, userId);
 
-  if (user.money < bet) {
+  if (!user || user.money < bet || bet <= 0) {
     return { error: "お金が足りません" };
   }
+
+  // 🔽 先に賭け金を引く
+  user.money -= bet;
 
   const result = Math.random() < 0.5 ? "heads" : "tails";
   const win = result === choice;
 
+  let profit = 0;
+
   if (win) {
-    user.money += bet;
+    // 🔼 勝ったら2倍返し
+    user.money += bet * 2;
+    profit = bet;
   } else {
-    user.money -= bet;
+    profit = -bet;
   }
 
   saveUser(guildId, userId, user);
@@ -28,6 +35,7 @@ export function playCoinflip({
     win,
     result,
     bet,
+    profit,        // +bet or -bet
     money: user.money
   };
 }
