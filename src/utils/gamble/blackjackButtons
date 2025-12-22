@@ -1,30 +1,45 @@
-// utils/gamble/blackjackButtons.js
+// utils/blackjackButtons.js
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
-export function blackjackButtons(disabled = false) {
+export function blackjackButtons(game) {
+  const hand = game.hands[game.currentHand];
+
+  const canDouble =
+    !game.doubled &&
+    !game.split &&
+    hand.length === 2 &&
+    !game.finished;
+
+  const canSplit =
+    !game.split &&
+    game.hands.length === 1 &&
+    hand.length === 2 &&
+    hand[0].value === hand[1].value &&
+    !game.finished;
+
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("bj-hit")
       .setLabel("Hit")
       .setStyle(ButtonStyle.Primary)
-      .setDisabled(disabled),
+      .setDisabled(game.finished),
 
     new ButtonBuilder()
       .setCustomId("bj-stand")
       .setLabel("Stand")
       .setStyle(ButtonStyle.Success)
-      .setDisabled(disabled),
+      .setDisabled(game.finished),
 
     new ButtonBuilder()
       .setCustomId("bj-double")
       .setLabel("Double")
       .setStyle(ButtonStyle.Secondary)
-      .setDisabled(true), // 後で実装
+      .setDisabled(!canDouble),
 
     new ButtonBuilder()
       .setCustomId("bj-split")
       .setLabel("Split")
       .setStyle(ButtonStyle.Secondary)
-      .setDisabled(true)
+      .setDisabled(!canSplit)
   );
 }
