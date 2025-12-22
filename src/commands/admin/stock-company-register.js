@@ -1,4 +1,4 @@
-// commands/admin/stock-register.js
+// commands/admin/stock-company-register.js
 import {
     SlashCommandBuilder,
     PermissionFlagsBits,
