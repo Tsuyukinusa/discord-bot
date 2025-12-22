@@ -1,0 +1,45 @@
+import { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } from "discord.js";
+import { readGuildDB, writeGuildDB } from "../../utils/file.js";
+
+export default {
+    data: new SlashCommandBuilder()
+        .setName("stock-delete")
+        .setDescription("株式会社を削除します（管理者専用）")
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+        .addStringOption(o =>
+            o.setName("id")
+                .setDescription("会社ID")
+                .setRequired(true)
+        ),
+
+    async execute(interaction) {
+        const guildId = interaction.guild.id;
+        const id = interaction.options.getString("id");
+
+        const db = await readGuildDB();
+        const stock = db[guildId]?.stocks?.[id];
+
+        if (!stock) {
+            return interaction.reply({
+                content: "❌ その会社は存在しません。",
+                ephemeral: true
+            });
+        }
+
+        delete db[guildId].stocks[id];
+        await writeGuildDB(db);
+
+        const embed = new EmbedBuilder()
+            .setColor("#ff4d4d")
+            .setTitle("🗑️ 株式会社 削除完了")
+            .addFields(
+                { name: "ID", value: id },
+                { name: "会社名", value: stock.name }
+            );
+
+        return interaction.reply({
+            embeds: [embed],
+            ephemeral: true
+        });
+    }
+};
