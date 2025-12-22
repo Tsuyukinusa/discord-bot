@@ -1,40 +1,62 @@
-import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle
+} from "discord.js";
 import { readGuildDB } from "../../utils/file.js";
 
+const PAGE_SIZE = 5;
+
 export default {
-    data: new SlashCommandBuilder()
-        .setName("stock-list")
-        .setDescription("登録されている株式会社一覧を表示します"),
+  data: new SlashCommandBuilder()
+    .setName("stock-list")
+    .setDescription("登録されている株の一覧を表示します"),
 
-    async execute(interaction) {
-        const guildId = interaction.guild.id;
-        const db = await readGuildDB();
+  async execute(interaction) {
+    const guildId = interaction.guild.id;
+    const db = await readGuildDB();
 
-        if (!db[guildId] || !db[guildId].stocks || Object.keys(db[guildId].stocks).length === 0) {
-            return interaction.reply({
-                content: "📉 まだ株式会社が登録されていません。",
-                ephemeral: false
-            });
-        }
-
-        const embed = new EmbedBuilder()
-            .setTitle("📈 株式会社一覧")
-            .setColor("#4b9aff")
-            .setDescription("現在登録されている株式会社です");
-
-        for (const [stockId, stock] of Object.entries(db[guildId].stocks)) {
-            embed.addFields({
-                name: `🏢 ${stock.name}`,
-                value:
-                    `🆔 ID: \`${stockId}\`\n` +
-                    `📊 変動率: **${stock.volatility}%**`,
-                inline: false
-            });
-        }
-
-        return interaction.reply({
-            embeds: [embed],
-            ephemeral: false
-        });
+    const stocks = db[guildId]?.stocks;
+    if (!stocks || Object.keys(stocks).length === 0) {
+      return interaction.reply("📉 登録されている株はありません。");
     }
+
+    const page = 1;
+    const embed = createStockEmbed(stocks, page);
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`stock-prev:${page}`)
+        .setLabel("◀")
+        .setStyle(ButtonStyle.Primary)
+        .setDisabled(true),
+
+      new ButtonBuilder()
+        .setCustomId(`stock-next:${page}`)
+        .setLabel("▶")
+        .setStyle(ButtonStyle.Primary)
+    );
+
+    await interaction.reply({
+      embeds: [embed],
+      components: [row]
+    });
+  }
 };
+
+function createStockEmbed(stocks, page) {
+  const entries = Object.entries(stocks);
+  const start = (page - 1) * PAGE_SIZE;
+  const sliced = entries.slice(start, start + PAGE_SIZE);
+
+  const desc = sliced.map(([id, s]) =>
+    `**${s.name}**\n変動率: ${s.rate}%`
+  ).join("\n\n");
+
+  return new EmbedBuilder()
+    .setTitle(`📊 株一覧（ページ ${page}）`)
+    .setDescription(desc)
+    .setColor("Green");
+}
