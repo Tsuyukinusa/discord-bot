@@ -1,7 +1,7 @@
 // utils/blackjackCore.js
-import { readGuildDB, writeGuildDB } from "./file.js";
+import { readGuildDB, writeGuildDB } from "../utils/file.js";
 import { getGame, saveGame, endGame } from "./blackjackStore.js";
-import { drawCard, calcHand, judge } from "./blackjackLogic.js";
+import { drawCard, calcHand, judgeHand } from "./blackjackLogic.js";
 
 function notOwner(game, userId) {
   return game.userId !== userId;
@@ -16,12 +16,16 @@ export async function playHit(guildId, userId) {
   if (notOwner(game, userId)) return { error: "あなたのゲームではありません" };
   if (game.finished) return { error: "ゲームは終了しています" };
 
-  game.hands[game.currentHand].push(drawCard());
+  const hand = game.hands[game.currentHand];
+  hand.push(drawCard());
 
-  if (calcHand(game.hands[game.currentHand]) > 21) {
-    game.finished = true;
-    game.result = "lose";
-    endGame(guildId, userId);
+  if (calcHand(hand) > 21) {
+    // 次の hand があれば切り替え
+    if (game.split && game.currentHand === 0) {
+      game.currentHand = 1;
+    } else {
+      await finishGame(guildId, userId, game);
+    }
   }
 
   saveGame(guildId, userId, game);
@@ -36,15 +40,13 @@ export async function playStand(guildId, userId) {
   if (!game) return { error: "ゲームが存在しません" };
   if (notOwner(game, userId)) return { error: "あなたのゲームではありません" };
 
-  while (calcHand(game.dealer) < 17) {
-    game.dealer.push(drawCard());
+  if (game.split && game.currentHand === 0) {
+    game.currentHand = 1;
+    saveGame(guildId, userId, game);
+    return game;
   }
 
-  game.finished = true;
-  game.result = judge(game);
-  await payout(guildId, userId, game);
-
-  endGame(guildId, userId);
+  await finishGame(guildId, userId, game);
   return game;
 }
 
@@ -70,6 +72,7 @@ export async function playDouble(guildId, userId) {
 
   game.hands[game.currentHand].push(drawCard());
 
+  await writeGuildDB(db);
   return playStand(guildId, userId);
 }
 
@@ -82,7 +85,7 @@ export async function playSplit(guildId, userId) {
   if (notOwner(game, userId)) return { error: "あなたのゲームではありません" };
 
   const hand = game.hands[0];
-  if (hand.length !== 2 || hand[0].value !== hand[1].value) {
+  if (hand.length !== 2 || hand[0].rank !== hand[1].rank) {
     return { error: "スプリットできません" };
   }
 
@@ -107,14 +110,34 @@ export async function playSplit(guildId, userId) {
 }
 
 /* ======================
+   終了処理
+====================== */
+async function finishGame(guildId, userId, game) {
+  while (calcHand(game.dealer) < 17) {
+    game.dealer.push(drawCard());
+  }
+
+  game.results = game.hands.map(hand =>
+    judgeHand(hand, game.dealer)
+  );
+
+  await payout(guildId, userId, game);
+
+  game.finished = true;
+  endGame(guildId, userId);
+}
+
+/* ======================
    払い戻し
 ====================== */
 async function payout(guildId, userId, game) {
   const db = await readGuildDB();
   const user = db[guildId].users[userId];
 
-  if (game.result === "win") user.money += game.bet * 2;
-  if (game.result === "push") user.money += game.bet;
+  for (const result of game.results) {
+    if (result === "win") user.money += game.bet * 2;
+    if (result === "push") user.money += game.bet;
+  }
 
   await writeGuildDB(db);
 }
