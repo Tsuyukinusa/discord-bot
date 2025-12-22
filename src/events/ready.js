@@ -16,7 +16,10 @@ export default {
       activities: [{ name: "経済 & カジノ & レベリング", type: 0 }],
       status: "online",
     });
-
+    
+// ⭐ 株価自動更新を起動
+    startStockScheduler(client);
+    
     console.log("🚀 Bot が完全に起動しました！");
   },
 };
