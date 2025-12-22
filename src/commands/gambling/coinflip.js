@@ -1,22 +1,24 @@
-// commands/gamble/coinflip.js
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { playCoinflip } from "../../utils/gamble/coinflipCore.js";
 
 export default {
   data: new SlashCommandBuilder()
     .setName("coinflip")
-    .setDescription("コイン投げでギャンブル")
+    .setDescription("コイン投げギャンブル")
     .addIntegerOption(o =>
-      o.setName("bet").setDescription("賭け金").setRequired(true)
+      o.setName("bet")
+        .setDescription("賭け金")
+        .setRequired(true)
+        .setMinValue(1)
     )
     .addStringOption(o =>
       o.setName("choice")
         .setDescription("表か裏")
+        .setRequired(true)
         .addChoices(
           { name: "表", value: "heads" },
           { name: "裏", value: "tails" }
         )
-        .setRequired(true)
     ),
 
   async execute(interaction) {
@@ -31,20 +33,24 @@ export default {
     });
 
     if (result.error) {
-      return interaction.reply({ content: result.error, ephemeral: true });
+      return interaction.reply({
+        content: `❌ ${result.error}`,
+        ephemeral: true
+      });
     }
 
     const embed = new EmbedBuilder()
+      .setColor(result.win ? "#4caf50" : "#f44336")
       .setTitle("🪙 コイン投げ")
       .setDescription(
-        `結果: **${result.result}**\n` +
-        (result.win ? "🎉 勝ち！" : "💀 負け…")
+        `あなたの選択: **${choice === "heads" ? "表" : "裏"}**\n` +
+        `結果: **${result.result === "heads" ? "表" : "裏"}**`
       )
-      .addFields({
-        name: "現在の所持金",
-        value: `${result.money}`
-      });
+      .addFields(
+        { name: "結果", value: result.win ? "🎉 勝ち！" : "💀 負け…" },
+        { name: "所持金", value: `${result.money}` }
+      );
 
-    await interaction.reply({ embeds: [embed] });
+    return interaction.reply({ embeds: [embed] });
   }
 };
