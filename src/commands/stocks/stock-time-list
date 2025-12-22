@@ -1,0 +1,40 @@
+// commands/stocks/stock-time-list.js
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import { readGuildDB } from "../../utils/file.js";
+
+export default {
+  data: new SlashCommandBuilder()
+    .setName("stock-time-list")
+    .setDescription("株価の変動時間一覧を表示します"),
+
+  async execute(interaction) {
+    const guildId = interaction.guild.id;
+    const db = await readGuildDB();
+
+    const config = db[guildId]?.stockConfig;
+
+    if (!config || !config.updateTimes || config.updateTimes.length === 0) {
+      return interaction.reply({
+        content: "❌ 株価の変動時間が設定されていません。",
+        ephemeral: true
+      });
+    }
+
+    // 時間を昇順に並べる
+    const times = [...config.updateTimes].sort();
+
+    const embed = new EmbedBuilder()
+      .setColor("#00c853")
+      .setTitle("⏰ 株価変動スケジュール")
+      .setDescription(
+        times.map(t => `• **${t}**`).join("\n")
+      )
+      .setFooter({ text: "設定された時間に全株価が一斉に変動します" })
+      .setTimestamp();
+
+    return interaction.reply({
+      embeds: [embed],
+      ephemeral: false // ← みんなに見せたいなら false
+    });
+  }
+};
