@@ -1,42 +1,20 @@
-import { EmbedBuilder } from "discord.js";
-import {
-  startBlackjack,
-  hit,
-  stand,
-  settleBlackjack,
-  calcHand
-} from "../../utils/gamble/blackjackCore.js";
+// messageCommands/blackjack.js
+import { startBlackjack } from "../utils/gamble/blackjackCore.js";
+import { createBlackjackEmbed } from "../utils/gamble/blackjackEmbed.js";
+import { blackjackButtons } from "../utils/gamble/blackjackButtons.js";
 
-export default async function blackjackMessage(message, args) {
-  const bet = parseInt(args[0]);
+export default async function blackjackMessage(message, args, client) {
+  const bet = Number(args[0]);
   if (!bet || bet <= 0) {
-    return message.reply({
-      embeds: [
-        new EmbedBuilder()
-          .setColor("Red")
-          .setDescription("❌ 賭け金を正しく指定してください\n例: `!bj 100`")
-      ]
-    });
+    return message.reply("❌ 賭け金を指定してね");
   }
 
-  const guildId = message.guild.id;
-  const userId = message.author.id;
+  const state = startBlackjack(bet);
+  client.blackjack = client.blackjack || {};
+  client.blackjack[message.author.id] = state;
 
-  let game = startBlackjack({ guildId, userId, bet });
-  if (game.error) {
-    return message.reply({
-      embeds: [new EmbedBuilder().setColor("Red").setDescription(game.error)]
-    });
-  }
-
-  const embed = new EmbedBuilder()
-    .setColor("#3498db")
-    .setTitle("🃏 ブラックジャック")
-    .setDescription(
-      `**あなた:** ${game.playerHand.join(", ")} (計 ${calcHand(game.playerHand)})\n` +
-      `**ディーラー:** ${game.dealerHand[0]}, ?`
-    )
-    .setFooter({ text: "!hit / !stand（後で実装）" });
-
-  message.reply({ embeds: [embed] });
+  await message.reply({
+    embeds: [createBlackjackEmbed(state)],
+    components: [blackjackButtons()],
+  });
 }
