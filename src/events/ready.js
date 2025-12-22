@@ -1,4 +1,5 @@
 import rankSelectHandler from "../selects/rankSelect.js";
+import { startStockUpdater } from "../utils/stockUpdater.js";
 
 export default {
   name: "ready",
@@ -12,14 +13,14 @@ export default {
     client.buttonHandlers = new Map();
     client.buttonHandlers.set("rank", rankSelectHandler);
 
+    // 🟢 株価自動更新スタート
+    startStockUpdater(client);
+
     client.user.setPresence({
       activities: [{ name: "経済 & カジノ & レベリング", type: 0 }],
       status: "online",
     });
-    
-// ⭐ 株価自動更新を起動
-    startStockScheduler(client);
-    
+
     console.log("🚀 Bot が完全に起動しました！");
   },
 };
