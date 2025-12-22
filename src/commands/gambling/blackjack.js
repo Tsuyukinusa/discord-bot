@@ -1,11 +1,7 @@
-import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import {
-  startBlackjack,
-  hit,
-  stand,
-  settleBlackjack,
-  calcHand
-} from "../../utils/gamble/blackjackCore.js";
+import { SlashCommandBuilder } from "discord.js";
+import { startBlackjack } from "../../utils/gamble/blackjackStore.js";
+import { createBlackjackEmbed } from "../../utils/gamble/blackjackEmbed.js";
+import { blackjackButtons } from "../../utils/gamble/blackjackButtons.js";
 
 export default {
   data: new SlashCommandBuilder()
@@ -19,27 +15,19 @@ export default {
     ),
 
   async execute(interaction) {
-    const guildId = interaction.guild.id;
-    const userId = interaction.user.id;
-    const bet = interaction.options.getInteger("bet");
+    const game = await startBlackjack({
+      guildId: interaction.guild.id,
+      userId: interaction.user.id,
+      bet: interaction.options.getInteger("bet")
+    });
 
-    const game = startBlackjack({ guildId, userId, bet });
     if (game.error) {
-      return interaction.reply({
-        embeds: [new EmbedBuilder().setColor("Red").setDescription(game.error)],
-        ephemeral: true
-      });
+      return interaction.reply({ content: game.error, ephemeral: true });
     }
 
-    const embed = new EmbedBuilder()
-      .setColor("#2ecc71")
-      .setTitle("🃏 ブラックジャック")
-      .addFields(
-        { name: "あなた", value: `${game.playerHand.join(", ")} (計 ${calcHand(game.playerHand)})` },
-        { name: "ディーラー", value: `${game.dealerHand[0]}, ?` }
-      )
-      .setFooter({ text: "ヒット / スタンドは後でボタン対応予定" });
-
-    return interaction.reply({ embeds: [embed] });
+    await interaction.reply({
+      embeds: [createBlackjackEmbed(game)],
+      components: [blackjackButtons(game)]
+    });
   }
 };
