@@ -17,8 +17,14 @@ export default {
                 .setRequired(false)
         )
         .addIntegerOption(o =>
-            o.setName("volatility")
-                .setDescription("新しい変動率（±%）（省略可）")
+            o.setName("min")
+                .setDescription("変動率の最小値（%）（省略可）")
+                .setRequired(false)
+                .setMinValue(0)
+        )
+        .addIntegerOption(o =>
+            o.setName("max")
+                .setDescription("変動率の最大値（%）（省略可）")
                 .setRequired(false)
                 .setMinValue(1)
         ),
@@ -27,7 +33,8 @@ export default {
         const guildId = interaction.guild.id;
         const id = interaction.options.getString("id");
         const name = interaction.options.getString("name");
-        const volatility = interaction.options.getInteger("volatility");
+        const min = interaction.options.getInteger("min");
+        const max = interaction.options.getInteger("max");
 
         const db = await readGuildDB();
         const stock = db[guildId]?.stocks?.[id];
@@ -39,8 +46,28 @@ export default {
             });
         }
 
+        // 名前変更
         if (name !== null) stock.name = name;
-        if (volatility !== null) stock.volatility = volatility;
+
+        // 変動率変更
+        if (min !== null || max !== null) {
+            if (!stock.volatility) {
+                stock.volatility = { min: 1, max: 1 };
+            }
+
+            const newMin = min ?? stock.volatility.min;
+            const newMax = max ?? stock.volatility.max;
+
+            if (newMin > newMax) {
+                return interaction.reply({
+                    content: "❌ 最小値は最大値以下にしてください。",
+                    ephemeral: true
+                });
+            }
+
+            stock.volatility.min = newMin;
+            stock.volatility.max = newMax;
+        }
 
         await writeGuildDB(db);
 
@@ -50,7 +77,10 @@ export default {
             .addFields(
                 { name: "ID", value: id },
                 { name: "会社名", value: stock.name },
-                { name: "変動率", value: `±${stock.volatility}%` }
+                {
+                    name: "変動率",
+                    value: `±${stock.volatility.min}% 〜 ±${stock.volatility.max}%`
+                }
             );
 
         return interaction.reply({
@@ -58,4 +88,4 @@ export default {
             ephemeral: true
         });
     }
-}; 
+};
