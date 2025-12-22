@@ -12,7 +12,7 @@ export function createBlackjackEmbed(game) {
 
   game.hands.forEach((hand, i) => {
     embed.addFields({
-      name: `あなたの手札 ${game.split ? `(Hand ${i + 1})` : ""}`,
+      name: `あなたの手札${game.split ? ` (Hand ${i + 1})` : ""}`,
       value: `${formatHand(hand)}\n合計: **${calcHand(hand)}**`,
       inline: false
     });
@@ -24,12 +24,12 @@ export function createBlackjackEmbed(game) {
   });
 
   if (game.finished) {
-    const text =
+    const result =
       game.result === "win" ? "🎉 勝ち！" :
       game.result === "lose" ? "💀 負け…" :
       "🤝 引き分け";
 
-    embed.setFooter({ text });
+    embed.setFooter({ text: result });
   } else if (game.split) {
     embed.setFooter({ text: `操作中のハンド: ${game.currentHand + 1}` });
   }
