@@ -58,7 +58,6 @@ export async function playStand(guildId, userId) {
   game.result = judgeGame(game);
   await payout(guildId, userId, game);
   endGame(guildId, userId);
-
   return game;
 }
 
@@ -73,10 +72,7 @@ export async function playDouble(guildId, userId) {
 
   const db = await readGuildDB();
   const user = db[guildId].users[userId];
-
-  if (user.money < game.bet) {
-    return { error: "お金が足りません" };
-  }
+  if (user.money < game.bet) return { error: "お金が足りません" };
 
   user.money -= game.bet;
   game.bet *= 2;
@@ -97,18 +93,13 @@ export async function playSplit(guildId, userId) {
   if (notOwner(game, userId)) return { error: "あなたのゲームではありません" };
 
   const hand = game.hands[0];
-  if (
-    hand.length !== 2 ||
-    hand[0].value !== hand[1].value
-  ) {
+  if (hand.length !== 2 || hand[0].value !== hand[1].value) {
     return { error: "スプリットできません" };
   }
 
   const db = await readGuildDB();
   const user = db[guildId].users[userId];
-  if (user.money < game.bet) {
-    return { error: "お金が足りません" };
-  }
+  if (user.money < game.bet) return { error: "お金が足りません" };
 
   user.money -= game.bet;
 
@@ -129,8 +120,8 @@ export async function playSplit(guildId, userId) {
 ====================== */
 function judgeGame(game) {
   const dealer = calcHand(game.dealer);
-
   let wins = 0;
+
   for (const hand of game.hands) {
     const total = calcHand(hand);
     if (total > 21) continue;
