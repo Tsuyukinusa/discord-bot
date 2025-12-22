@@ -2,32 +2,36 @@ import { EmbedBuilder } from "discord.js";
 import { calcHand } from "./blackjackLogic.js";
 
 function formatHand(hand) {
-  return `${hand.map(c => c.label).join(" ")}  (${calcHand(hand)})`;
+  return hand.map(c => c.display).join(" ");
 }
 
 export function createBlackjackEmbed(game) {
-  const playerHand = game.hands[game.currentHand];
-  const dealerHand = game.finished
-    ? formatHand(game.dealer)
-    : `${game.dealer[0].label} ❓`;
-
   const embed = new EmbedBuilder()
-    .setColor(game.finished ? "#ffcc00" : "#00c3ff")
-    .setTitle("🃏 Blackjack")
-    .addFields(
-      { name: "あなた", value: formatHand(playerHand), inline: false },
-      { name: "ディーラー", value: dealerHand, inline: false },
-      { name: "BET", value: `${game.bet}`, inline: true }
-    );
+    .setColor("#2ecc71")
+    .setTitle("🃏 ブラックジャック");
+
+  game.hands.forEach((hand, i) => {
+    embed.addFields({
+      name: `あなたの手札 ${game.split ? `(Hand ${i + 1})` : ""}`,
+      value: `${formatHand(hand)}\n合計: **${calcHand(hand)}**`,
+      inline: false
+    });
+  });
+
+  embed.addFields({
+    name: "ディーラー",
+    value: `${formatHand(game.dealer)}\n合計: **${calcHand(game.dealer)}**`
+  });
 
   if (game.finished) {
-    const resultText = {
-      win: "🎉 勝ち！",
-      lose: "💥 負け…",
-      push: "🤝 引き分け"
-    }[game.result];
+    const text =
+      game.result === "win" ? "🎉 勝ち！" :
+      game.result === "lose" ? "💀 負け…" :
+      "🤝 引き分け";
 
-    embed.addFields({ name: "結果", value: resultText });
+    embed.setFooter({ text });
+  } else if (game.split) {
+    embed.setFooter({ text: `操作中のハンド: ${game.currentHand + 1}` });
   }
 
   return embed;
