@@ -1,3 +1,4 @@
+// commands/gamble/coinflip.js
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { playCoinflip } from "../../utils/gamble/coinflipCore.js";
 
@@ -22,34 +23,35 @@ export default {
     ),
 
   async execute(interaction) {
+    const guildId = interaction.guild.id;
+    const userId = interaction.user.id;
     const bet = interaction.options.getInteger("bet");
     const choice = interaction.options.getString("choice");
 
-    const result = playCoinflip({
-      guildId: interaction.guild.id,
-      userId: interaction.user.id,
-      bet,
-      choice
-    });
+    const result = playCoinflip({ guildId, userId, bet, choice });
 
+    // ❌ エラー
     if (result.error) {
-      return interaction.reply({
-        content: `❌ ${result.error}`,
-        ephemeral: true
-      });
+      const embed = new EmbedBuilder()
+        .setColor("#ff5252")
+        .setTitle("❌ コイン投げ失敗")
+        .setDescription(result.error);
+
+      return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
+    // ✅ 成功
     const embed = new EmbedBuilder()
-      .setColor(result.win ? "#4caf50" : "#f44336")
-      .setTitle("🪙 コイン投げ")
-      .setDescription(
-        `あなたの選択: **${choice === "heads" ? "表" : "裏"}**\n` +
-        `結果: **${result.result === "heads" ? "表" : "裏"}**`
-      )
+      .setColor(result.win ? "#4caf50" : "#ff9800")
+      .setTitle("🪙 コイン投げ結果")
       .addFields(
-        { name: "結果", value: result.win ? "🎉 勝ち！" : "💀 負け…" },
-        { name: "所持金", value: `${result.money}` }
-      );
+        { name: "あなたの選択", value: choice === "heads" ? "表" : "裏", inline: true },
+        { name: "結果", value: result.result === "heads" ? "表" : "裏", inline: true },
+        { name: "賭け金", value: `${bet}`, inline: true },
+        { name: "結果", value: result.win ? "🎉 勝ち！" : "💥 負け…" },
+        { name: "現在の所持金", value: `${result.money}` }
+      )
+      .setTimestamp();
 
     return interaction.reply({ embeds: [embed] });
   }
