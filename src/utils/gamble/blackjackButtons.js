@@ -1,21 +1,16 @@
-// utils/blackjackButtons.js
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import { calcHand } from "./blackjackLogic.js";
 
 export function blackjackButtons(game) {
   const hand = game.hands[game.currentHand];
 
   const canDouble =
-    !game.doubled &&
-    !game.split &&
-    hand.length === 2 &&
-    !game.finished;
+    hand.length === 2 && !game.doubled && !game.split;
 
   const canSplit =
-    !game.split &&
-    game.hands.length === 1 &&
     hand.length === 2 &&
     hand[0].value === hand[1].value &&
-    !game.finished;
+    !game.split;
 
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
