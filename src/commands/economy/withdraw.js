@@ -57,7 +57,7 @@ export default {
             .setDescription(
                 `💸 **${amount.toLocaleString()}** を銀行から引き出しました！\n\n` +
                 `**📌 現在の残高**\n` +
-                `👜 手持ち：**${user.money.toLocaleString()}**\n` +
+                `👜 手持ち：**${user.balance.toLocaleString()}**\n` +
                 `🏦 銀行：**${user.bank.toLocaleString()}**`
             )
             .setFooter({ text: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
