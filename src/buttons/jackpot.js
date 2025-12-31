@@ -4,8 +4,8 @@ import {
   closeJackpot,
   getJackpot
 } from "../utils/gamble/jackpot/jackpotCore.js";
-import { createJackpotEmbed } from "../utils/gamble/jackpotEmbed.js";
-import { jackpotButtons } from "../utils/gamble/jackpotButtons.js";
+import { createJackpotEmbed } from "../utils/gamble/jackpot/jackpotEmbed.js";
+import { jackpotButtons } from "../utils/gamble/jackpot/jackpotButtons.js";
 
 export default {
   customId: /^jackpot-(join|close)$/,
