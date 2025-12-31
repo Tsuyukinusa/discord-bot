@@ -1,4 +1,4 @@
-import { readGuildDB } from "../utils/file.js";
+import { readGuildDB } from "../utils/core/file.js";
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 export default async function rankSelectHandler(interaction) {
