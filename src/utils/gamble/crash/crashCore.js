@@ -1,5 +1,5 @@
 // utils/gamble/crashCore.js
-import { readGuildDB, writeGuildDB } from "../file.js";
+import { readGuildDB, writeGuildDB } from "../utils/core/file.js";
 
 const crashes = new Map(); // guildId:userId => game
 
