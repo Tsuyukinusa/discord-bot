@@ -32,7 +32,7 @@ export async function playDice({
   const rate = getDicePayout(betType);
 
   const payout = win ? Math.floor(bet * rate) : 0;
-  if (win) user.money += payout;
+  if (win) user.balance += payout;
 
   await writeGuildDB(db);
 
@@ -44,6 +44,6 @@ export async function playDice({
     win,
     rate,
     payout,
-    balance: user.money
+    balance: user.balance
   };
 }
