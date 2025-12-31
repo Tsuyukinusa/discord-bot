@@ -6,7 +6,7 @@ import {
     ButtonStyle
 } from "discord.js";
 
-import { getAllUsers } from "../../utils/userdb.js";
+import { getAllUsers } from "../../utils/core/file.js";
 
 export default {
     data: new SlashCommandBuilder()
