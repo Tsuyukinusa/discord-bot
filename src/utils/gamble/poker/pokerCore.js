@@ -11,11 +11,11 @@ export async function startPoker({ guildId, userId, bet }) {
   const db = await readGuildDB();
   const user = db[guildId]?.users?.[userId];
 
-  if (!user || user.money < bet) {
+  if (!user || user.balance < bet) {
     return { error: "所持金が足りません" };
   }
 
-  user.money -= bet;
+  user.balance -= bet;
 
   const deck = shuffle(createDeck());
   const hand = deck.splice(0, 5);
