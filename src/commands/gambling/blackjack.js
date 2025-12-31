@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from "discord.js";
-import { startBlackjack } from "../../utils/gamble/blackjackStore.js";
-import { createBlackjackEmbed } from "../../utils/gamble/blackjackEmbed.js";
-import { blackjackButtons } from "../../utils/gamble/blackjackButtons.js";
+import { startBlackjack } from "../../utils/gamble/blackjack/blackjackStore.js";
+import { createBlackjackEmbed } from "../../utils/gamble/blackjack/blackjackEmbed.js";
+import { blackjackButtons } from "../../utils/gamble/blackjack/blackjackButtons.js";
 
 export default {
   data: new SlashCommandBuilder()
