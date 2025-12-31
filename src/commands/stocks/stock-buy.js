@@ -49,7 +49,7 @@ export default {
 
     const totalCost = stock.price * amount;
 
-    if (user.money < totalCost) {
+    if (user.balance < totalCost) {
       return interaction.reply({
         content: "❌ 所持金が足りません。",
         ephemeral: true
