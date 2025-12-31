@@ -1,4 +1,4 @@
-import { readGuildDB } from "../utils/file.js";
+import { readGuildDB, writeGuildDB } from "../utils/core/file.js";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 
 export async function createProfileCard(guildId, user) {
