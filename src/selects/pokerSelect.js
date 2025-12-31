@@ -1,5 +1,5 @@
 // src/selects/pokerSelect.js
-import { getPokerGame, savePokerGame } from "../utils/gamble/pokerStore.js";
+import { getPokerGame, savePokerGame } from "../utils/gamble/poker/pokerStore.js";
 
 export default {
   customId: "poker-select",
