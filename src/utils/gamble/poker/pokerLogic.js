@@ -1,31 +1,42 @@
-// utils/gamble/pokerLogic.js
+export function judgePoker(hand) {
+  const values = hand.map(c => c.value).sort((a,b)=>a-b);
+  const suits = hand.map(c => c.suit);
 
-const SUITS = ["♠", "♥", "♦", "♣"];
-const VALUES = [1,2,3,4,5,6,7,8,9,10,11,12,13];
+  const counts = {};
+  for (const v of values) counts[v] = (counts[v] || 0) + 1;
+  const countValues = Object.values(counts).sort((a,b)=>b-a);
 
-export function createDeck() {
-  const deck = [];
-  for (const suit of SUITS) {
-    for (const value of VALUES) {
-      deck.push({
-        suit,
-        value,
-        display:
-          (value === 1 ? "A" :
-           value === 11 ? "J" :
-           value === 12 ? "Q" :
-           value === 13 ? "K" : value) + suit
-      });
-    }
-  }
-  return deck;
-}
+  const isFlush = suits.every(s => s === suits[0]);
+  const isStraight =
+    values.every((v,i)=> i===0 || v === values[i-1]+1) ||
+    JSON.stringify(values) === JSON.stringify([1,10,11,12,13]);
 
-export function shuffle(deck) {
-  return deck.sort(() => Math.random() - 0.5);
-}
+  if (isFlush && JSON.stringify(values) === JSON.stringify([1,10,11,12,13]))
+    return { name: "ロイヤルフラッシュ", rate: 100 };
 
-export function dealHand() {
-  const deck = shuffle(createDeck());
-  return deck.slice(0, 5);
+  if (isFlush && isStraight)
+    return { name: "ストレートフラッシュ", rate: 50 };
+
+  if (countValues[0] === 4)
+    return { name: "フォーカード", rate: 25 };
+
+  if (countValues[0] === 3 && countValues[1] === 2)
+    return { name: "フルハウス", rate: 10 };
+
+  if (isFlush)
+    return { name: "フラッシュ", rate: 7 };
+
+  if (isStraight)
+    return { name: "ストレート", rate: 5 };
+
+  if (countValues[0] === 3)
+    return { name: "スリーカード", rate: 3 };
+
+  if (countValues[0] === 2 && countValues[1] === 2)
+    return { name: "ツーペア", rate: 2 };
+
+  if (countValues[0] === 2)
+    return { name: "ワンペア", rate: 1.5 };
+
+  return { name: "ハズレ", rate: 0 };
 }
