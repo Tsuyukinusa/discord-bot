@@ -1,5 +1,5 @@
 // messageCommands/dice.js
-import { playDice } from "../utils/gamble/DiceCore.js";
+import { playDice } from "../utils/gamble/dice/diceCore.js";
 import { createDiceEmbed } from "../utils/gamble/dice/diceEmbed.js";
 
 export default {
