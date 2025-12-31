@@ -1,7 +1,7 @@
 // src/buttons/crash.js
 import { EmbedBuilder } from "discord.js";
 import { cashOut } from "../utils/gamble/crash/crashCore.js";
-import { createCrashEmbed } from "../utils/gamble/crashEmbed.js";
+import { createCrashEmbed } from "../utils/gamble/crash/crashEmbed.js";
 
 export default {
   customId: "crash-cashout",
