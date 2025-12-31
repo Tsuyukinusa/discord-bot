@@ -26,7 +26,7 @@ export default {
 
         // --- all（全額）処理 ---
         if (amountRaw.toLowerCase() === "all") {
-            amount = user.money;
+            amount = user.balance;
             if (amount <= 0) {
                 return interaction.reply({
                     content: "❌ 預けられるお金がありません。",
@@ -43,7 +43,7 @@ export default {
                     ephemeral: true
                 });
             }
-            if (amount > user.money) {
+            if (amount > user.balance) {
                 return interaction.reply({
                     content: "❌ 手持ちより多い金額は預けられません！",
                     ephemeral: true
