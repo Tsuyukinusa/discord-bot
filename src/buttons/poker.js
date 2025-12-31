@@ -1,7 +1,7 @@
 // src/buttons/poker.js
 import { EmbedBuilder } from "discord.js";
-import { getPokerGame, endPokerGame } from "../utils/gamble/pokerStore.js";
-import { exchangeCards, judgeAndPayout } from "../utils/gamble/pokerCore.js";
+import { getPokerGame, endPokerGame } from "../utils/gamble/poker/pokerStore.js";
+import { exchangeCards, judgeAndPayout } from "../utils/gamble/poker/pokerCore.js";
 import { createPokerEmbed } from "../utils/gamble/pokerEmbed.js";
 
 export default {
