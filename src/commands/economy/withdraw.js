@@ -47,7 +47,7 @@ export default {
 
         // --- 更新 ---
         user.bank -= amount;
-        user.money += amount;
+        user.balance += amount;
         updateUser(guildId, userId, user);
 
         // --- 埋め込み返信 ---
