@@ -5,7 +5,7 @@ import {
   ButtonStyle,
   EmbedBuilder
 } from "discord.js";
-import { readGuildDB, writeGuildDB } from "../../utils/file.js";
+import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
 
 export default {
   customId: "shop-panel-select",
