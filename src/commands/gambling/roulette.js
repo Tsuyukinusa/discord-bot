@@ -2,8 +2,8 @@ import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import {
   joinRoulette,
   getRoulette
-} from "../../utils/gamble/rouletteCore.js";
-import { createRouletteWaitingEmbed } from "../../utils/gamble/rouletteEmbed.js";
+} from "../../utils/gamble/roulette/rouletteCore.js";
+import { createRouletteWaitingEmbed } from "../../utils/gamble/roulette/rouletteEmbed.js";
 
 export default {
   data: new SlashCommandBuilder()
