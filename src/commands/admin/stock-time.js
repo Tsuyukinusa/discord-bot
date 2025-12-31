@@ -3,7 +3,7 @@ import {
   EmbedBuilder,
   PermissionFlagsBits
 } from "discord.js";
-import { readGuildDB, writeGuildDB } from "../../utils/file.js";
+import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
 
 export default {
   data: new SlashCommandBuilder()
