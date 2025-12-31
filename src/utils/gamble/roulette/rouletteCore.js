@@ -1,4 +1,4 @@
-import { readGuildDB, writeGuildDB } from "../file.js";
+import { readGuildDB, writeGuildDB } from "../utils/core/file.js";
 import { resolveRoulette } from "./rouletteLogic.js";
 
 const roulettes = new Map(); // guildId => roulette
