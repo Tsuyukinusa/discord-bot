@@ -1,5 +1,5 @@
 // utils/gamble/coinflipCore.js
-import { getUser, saveUser } from "../userDB.js";
+import { readGuildDB, writeGuildDB } from "../utils/core/file.js";
 
 export function playCoinflip({
   guildId,
