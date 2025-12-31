@@ -1,4 +1,4 @@
-import { readGuildDB, writeGuildDB } from "../utils/file.js";
+import { readGuildDB, writeGuildDB } from "../utils/core/file.js";
 
 function initUser(guildData, guildId, userId) {
   if (!guildData[guildId]) guildData[guildId] = {};
