@@ -56,7 +56,7 @@ export default {
                             1)
                 ) + guild.settings.slut.diamondMin;
 
-            user.money += money;
+            user.balance += money;
             user.diamond += diamond;
 
             // カスタムリプライ
@@ -88,7 +88,7 @@ export default {
                             1)
                 ) + guild.settings.slut.failMoneyMin;
 
-            user.money -= failMoney;
+            user.balance -= failMoney;
             embedColor = 0xff0000;
 
             // カスタムリプライ
