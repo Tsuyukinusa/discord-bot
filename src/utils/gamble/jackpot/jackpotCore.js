@@ -40,12 +40,12 @@ export async function joinJackpot({ guildId, userId }) {
   const db = await readGuildDB();
   const user = db[guildId]?.users?.[userId];
 
-  if (!user || user.money < jackpot.entry) {
+  if (!user || user.balance < jackpot.entry) {
     return { error: "所持金が足りません" };
   }
 
   // お金を引く
-  user.money -= jackpot.entry;
+  user.balance -= jackpot.entry;
   jackpot.players.push({ userId });
   jackpot.pot += jackpot.entry;
 
