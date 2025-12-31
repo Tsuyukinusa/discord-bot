@@ -14,10 +14,10 @@ export async function joinRoulette({ guildId, userId, bet }) {
 
   // 金額解釈
   let amount = bet.amount;
-  if (amount === "half") amount = Math.floor(user.money / 2);
-  if (amount === "all") amount = user.money;
+  if (amount === "half") amount = Math.floor(user.balance / 2);
+  if (amount === "all") amount = user.balance;
 
-  if (amount <= 0 || user.money < amount) {
+  if (amount <= 0 || user.balance < amount) {
     return { error: "所持金が足りません" };
   }
 
