@@ -1,69 +1,31 @@
-/* ======================
-   ポーカー役判定
-====================== */
-export function judgePoker(hand) {
-  // value: 1(A)〜13(K)
-  const values = hand.map(c => c.value).sort((a, b) => a - b);
-  const suits = hand.map(c => c.suit);
+// utils/gamble/pokerLogic.js
 
-  // 同じ数字の枚数カウント
-  const counts = {};
-  for (const v of values) {
-    counts[v] = (counts[v] || 0) + 1;
+const SUITS = ["♠", "♥", "♦", "♣"];
+const VALUES = [1,2,3,4,5,6,7,8,9,10,11,12,13];
+
+export function createDeck() {
+  const deck = [];
+  for (const suit of SUITS) {
+    for (const value of VALUES) {
+      deck.push({
+        suit,
+        value,
+        display:
+          (value === 1 ? "A" :
+           value === 11 ? "J" :
+           value === 12 ? "Q" :
+           value === 13 ? "K" : value) + suit
+      });
+    }
   }
-  const countValues = Object.values(counts).sort((a, b) => b - a);
+  return deck;
+}
 
-  // フラッシュ
-  const isFlush = suits.every(s => s === suits[0]);
+export function shuffle(deck) {
+  return deck.sort(() => Math.random() - 0.5);
+}
 
-  // ストレート（A2345 と 10JQKA 両対応）
-  const isNormalStraight = values.every(
-    (v, i) => i === 0 || v === values[i - 1] + 1
-  );
-  const isLowAceStraight =
-    JSON.stringify(values) === JSON.stringify([1, 2, 3, 4, 5]);
-  const isRoyalValues =
-    JSON.stringify(values) === JSON.stringify([1, 10, 11, 12, 13]);
-
-  const isStraight = isNormalStraight || isLowAceStraight;
-
-  /* ===== 判定 ===== */
-
-  if (isFlush && isRoyalValues) {
-    return { rank: "royal_flush", name: "ロイヤルフラッシュ", rate: 100 };
-  }
-
-  if (isFlush && isStraight) {
-    return { rank: "straight_flush", name: "ストレートフラッシュ", rate: 50 };
-  }
-
-  if (countValues[0] === 4) {
-    return { rank: "four", name: "フォーカード", rate: 25 };
-  }
-
-  if (countValues[0] === 3 && countValues[1] === 2) {
-    return { rank: "full_house", name: "フルハウス", rate: 10 };
-  }
-
-  if (isFlush) {
-    return { rank: "flush", name: "フラッシュ", rate: 7 };
-  }
-
-  if (isStraight) {
-    return { rank: "straight", name: "ストレート", rate: 5 };
-  }
-
-  if (countValues[0] === 3) {
-    return { rank: "three", name: "スリーカード", rate: 3 };
-  }
-
-  if (countValues[0] === 2 && countValues[1] === 2) {
-    return { rank: "two_pair", name: "ツーペア", rate: 2 };
-  }
-
-  if (countValues[0] === 2) {
-    return { rank: "one_pair", name: "ワンペア", rate: 1.5 };
-  }
-
-  return { rank: "lose", name: "役なし", rate: 0 };
+export function dealHand() {
+  const deck = shuffle(createDeck());
+  return deck.slice(0, 5);
 }
