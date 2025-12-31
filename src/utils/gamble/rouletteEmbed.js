@@ -1,42 +1,55 @@
 import { EmbedBuilder } from "discord.js";
 
-/**
- * @param {Object} data
- * @param {number} data.result
- * @param {string} data.color
- * @param {Array} data.details
- */
-export function createRouletteResultEmbed({ result, color, details }) {
-  const winners = details
-    .filter(d => d.win)
-    .map(d => `<@${d.userId}>`);
-
-  const colorMap = {
-    red: 0xe74c3c,
-    black: 0x2c3e50,
-    green: 0x2ecc71
-  };
-
-  const embed = new EmbedBuilder()
-    .setTitle("🎰 ルーレット結果")
-    .setColor(colorMap[color] ?? 0xffffff)
+/* ======================
+   受付中Embed
+====================== */
+export function createRouletteWaitingEmbed({
+  bets,
+  remainingSeconds
+}) {
+  return new EmbedBuilder()
+    .setTitle("🎡 ルーレット")
     .setDescription(
-      `**${result} 番 (${color}) でした！**`
-    );
-
-  if (winners.length > 0) {
-    embed.addFields({
-      name: "🎉 勝者",
-      value: winners.join("、"),
-      inline: false
+      bets.length === 0
+        ? "まだ誰も賭けていません"
+        : bets.map(b =>
+            `• <@${b.userId}> ： **${b.type}** ${b.value ?? ""}（${b.amount}）`
+          ).join("\n")
+    )
+    .setColor("#3498db")
+    .setFooter({
+      text: `⏳ 残り ${remainingSeconds} 秒`
     });
-  } else {
-    embed.addFields({
-      name: "😢 勝者なし",
-      value: "今回は当たりがありませんでした",
-      inline: false
-    });
-  }
+}
 
-  return embed;
+/* ======================
+   結果Embed
+====================== */
+export function createRouletteResultEmbed({
+  result,
+  color,
+  details
+}) {
+  const winners = details.filter(d => d.win);
+
+  return new EmbedBuilder()
+    .setTitle("🎡 ルーレット結果")
+    .setColor(
+      color === "red" ? "Red" :
+      color === "black" ? "Black" :
+      "Green"
+    )
+    .setDescription(`🎯 **${result} 番 (${color})** でした！`)
+    .addFields(
+      {
+        name: "🎉 勝者",
+        value:
+          winners.length === 0
+            ? "なし…"
+            : winners
+                .map(w => `<@${w.userId}>（+${w.payout}）`)
+                .join("\n")
+      }
+    )
+    .setFooter({ text: "ルーレット終了" });
 }
