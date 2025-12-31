@@ -24,7 +24,7 @@ export default {
     const db = await readGuildDB();
     const user = db[guildId]?.users?.[userId];
 
-    if (!user || user.money < bet) {
+    if (!user || user.balance < bet) {
       return interaction.reply({
         embeds: [
           new EmbedBuilder()
@@ -48,7 +48,7 @@ export default {
     }
 
     // 実行
-    user.money -= bet;
+    user.balance -= bet;
     const result = playSlot({ bet, symbols });
 
     if (result.win) {
