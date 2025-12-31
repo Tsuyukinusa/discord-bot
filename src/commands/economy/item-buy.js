@@ -104,7 +104,7 @@ export default {
 
         const totalCost = item.cost * amount;
 
-        if (user.money < totalCost) {
+        if (user.balance < totalCost) {
             return interaction.reply({
                 content: `❌ 所持金が足りません。必要: ${totalCost}コイン`,
                 ephemeral: true
@@ -119,7 +119,7 @@ export default {
         }
 
         // 購入処理
-        user.money -= totalCost;
+        user.balance -= totalCost;
         item.stock -= amount;
 
         if (!user.inventory[itemId]) user.inventory[itemId] = 0;
