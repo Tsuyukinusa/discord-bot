@@ -1,4 +1,4 @@
-import { readGuildDB, writeGuildDB } from "../../utils/file.js";
+import { readGuildDB, writeGuildDB } from "../utils/core/file.js";
 
 function initGuild(db, guildId) {
   if (!db[guildId]) db[guildId] = {};
