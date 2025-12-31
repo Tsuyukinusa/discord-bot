@@ -1,9 +1,8 @@
 // src/messageCommands/slot.js
 import { EmbedBuilder } from "discord.js";
-import { playSlot } from "../utils/gamble/slotLogic.js";
-import { createSlotEmbed } from "../utils/gamble/slotEmbed.js";
-import { readGuildDB, writeGuildDB } from "../utils/file.js";
-import { getSlotSymbols } from "../utils/gamble/slotSymbols.js";
+import { playSlot } from "../utils/gamble/slot/slotLogic.js";
+import { createSlotEmbed } from "../utils/gamble/slot/slotEmbed.js";
+import { readGuildDB, writeGuildDB } from "../utils/core/file.js";
 
 export default {
   name: "slot",
