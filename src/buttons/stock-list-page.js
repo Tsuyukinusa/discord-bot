@@ -4,7 +4,7 @@ import {
   ButtonStyle,
   EmbedBuilder
 } from "discord.js";
-import { readGuildDB } from "../utils/file.js";
+import { readGuildDB } from "../utils/core/file.js";
 
 const PAGE_SIZE = 5;
 
