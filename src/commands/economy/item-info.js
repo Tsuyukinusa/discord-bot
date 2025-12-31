@@ -2,7 +2,7 @@ import {
     SlashCommandBuilder,
     EmbedBuilder
 } from "discord.js";
-import { readGuildDB } from "../../utils/file.js";
+import { readGuildDB } from "../../utils/core/file.js";
 
 export default {
     data: new SlashCommandBuilder()
