@@ -80,7 +80,7 @@ export default {
             }
 
             // キャッシュバック（売値返金）
-            user.money += item.sellPrice;
+            user.balance += item.sellPrice;
 
             await member.roles.add(roleId);
 
@@ -92,7 +92,7 @@ export default {
                 .setDescription(`ロール **${role.name}** を付与しました！`)
                 .addFields(
                     { name: "返金額", value: `${item.sellPrice} コイン`, inline: true },
-                    { name: "あなたの新しい所持金", value: `${user.money} コイン`, inline: true }
+                    { name: "あなたの新しい所持金", value: `${user.balance} コイン`, inline: true }
                 );
 
             return interaction.reply({ embeds: [embed] });
