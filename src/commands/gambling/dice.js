@@ -1,7 +1,7 @@
 // commands/gambling/dice.js
 import { SlashCommandBuilder } from "discord.js";
-import { playDice } from "../../utils/gamble/DiceCore.js";
-import { createDiceEmbed } from "../../utils/gamble/diceEmbed.js";
+import { playDice } from "../../utils/gamble/dice/diceCore.js";
+import { createDiceEmbed } from "../../utils/gamble/dice/diceEmbed.js";
 
 export default {
   data: new SlashCommandBuilder()
