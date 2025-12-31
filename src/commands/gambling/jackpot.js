@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { startJackpot, getJackpot } from "../../utils/gamble/jackpotCore.js";
-import { createJackpotEmbed } from "../../utils/gamble/jackpotEmbed.js";
-import { jackpotButtons } from "../../utils/gamble/jackpotButtons.js";
+import { startJackpot, getJackpot } from "../../utils/gamble/jackpot/jackpotCore.js";
+import { createJackpotEmbed } from "../../utils/gamble/jackpot/jackpotEmbed.js";
+import { jackpotButtons } from "../../utils/gamble/jackpot/jackpotButtons.js";
 
 export default {
   data: new SlashCommandBuilder()
