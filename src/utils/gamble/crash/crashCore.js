@@ -24,11 +24,11 @@ export async function startCrash({ guildId, userId, bet }) {
 
   const db = await readGuildDB();
   const user = db[guildId]?.users?.[userId];
-  if (!user || user.money < bet) {
+  if (!user || user.balance < bet) {
     return { error: "所持金が足りません" };
   }
 
-  user.money -= bet;
+  user.balance -= bet;
   await writeGuildDB(db);
 
   const game = {
