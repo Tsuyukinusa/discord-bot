@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { readUserDB, writeUserDB } from "../../utils/file.js";
+import { readUserDB, writeUserDB } from "../../utils/core/file.js";
 
 export default {
   data: new SlashCommandBuilder()
