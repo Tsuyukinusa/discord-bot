@@ -72,9 +72,9 @@ export async function playDouble(guildId, userId) {
 
   const db = await readGuildDB();
   const user = db[guildId].users[userId];
-  if (user.money < game.bet) return { error: "お金が足りません" };
+  if (user.balance < game.bet) return { error: "お金が足りません" };
 
-  user.money -= game.bet;
+  user.balance -= game.bet;
   game.bet *= 2;
   game.doubled = true;
 
