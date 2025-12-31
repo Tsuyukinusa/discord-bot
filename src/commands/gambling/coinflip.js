@@ -1,6 +1,6 @@
 // commands/gamble/coinflip.js
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { playCoinflip } from "../../utils/gamble/coinflipCore.js";
+import { playCoinflip } from "../../utils/gamble/coinflip/coinflipCore.js";
 
 export default {
   data: new SlashCommandBuilder()
