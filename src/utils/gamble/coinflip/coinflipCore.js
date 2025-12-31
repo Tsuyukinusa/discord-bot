@@ -9,12 +9,12 @@ export function playCoinflip({
 }) {
   const user = getUser(guildId, userId);
 
-  if (!user || user.money < bet || bet <= 0) {
+  if (!user || user.balance < bet || bet <= 0) {
     return { error: "お金が足りません" };
   }
 
   // 🔽 先に賭け金を引く
-  user.money -= bet;
+  user.balance -= bet;
 
   const result = Math.random() < 0.5 ? "heads" : "tails";
   const win = result === choice;
