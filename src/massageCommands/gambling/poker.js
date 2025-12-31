@@ -1,5 +1,5 @@
 import { playPoker } from "../utils/gamble/pokerCore.js";
-import { createPokerEmbed } from "../utils/gamble/pokerEmbed.js";
+import { createPokerEmbed } from "../utils/gamble/poker/pokerEmbed.js";
 
 export default {
   name: "poker",
