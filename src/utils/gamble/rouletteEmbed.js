@@ -1,55 +1,43 @@
 import { EmbedBuilder } from "discord.js";
 
-/* ======================
-   受付中Embed
-====================== */
-export function createRouletteWaitingEmbed({
-  bets,
-  remainingSeconds
-}) {
+export function createRouletteWaitingEmbed(roulette) {
+  const remain = Math.max(
+    0,
+    Math.ceil((roulette.endAt - Date.now()) / 1000)
+  );
+
   return new EmbedBuilder()
     .setTitle("🎡 ルーレット")
-    .setDescription(
-      bets.length === 0
-        ? "まだ誰も賭けていません"
-        : bets.map(b =>
-            `• <@${b.userId}> ： **${b.type}** ${b.value ?? ""}（${b.amount}）`
-          ).join("\n")
-    )
     .setColor("#3498db")
-    .setFooter({
-      text: `⏳ 残り ${remainingSeconds} 秒`
-    });
+    .setDescription("参加受付中！")
+    .addFields(
+      {
+        name: "参加人数",
+        value: `${roulette.bets.length} 人`,
+        inline: true
+      },
+      {
+        name: "残り時間",
+        value: `${remain} 秒`,
+        inline: true
+      }
+    );
 }
 
-/* ======================
-   結果Embed
-====================== */
-export function createRouletteResultEmbed({
-  result,
-  color,
-  details
-}) {
-  const winners = details.filter(d => d.win);
+export function createRouletteResultEmbed(result) {
+  const winners = result.details
+    .filter(d => d.win)
+    .map(d => `<@${d.userId}>`)
+    .join("、");
 
   return new EmbedBuilder()
     .setTitle("🎡 ルーレット結果")
-    .setColor(
-      color === "red" ? "Red" :
-      color === "black" ? "Black" :
-      "Green"
+    .setColor("#f1c40f")
+    .setDescription(
+      `**${result.result} (${result.color})** でした！`
     )
-    .setDescription(`🎯 **${result} 番 (${color})** でした！`)
-    .addFields(
-      {
-        name: "🎉 勝者",
-        value:
-          winners.length === 0
-            ? "なし…"
-            : winners
-                .map(w => `<@${w.userId}>（+${w.payout}）`)
-                .join("\n")
-      }
-    )
-    .setFooter({ text: "ルーレット終了" });
+    .addFields({
+      name: "勝者",
+      value: winners || "なし"
+    });
 }
