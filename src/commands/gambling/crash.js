@@ -1,8 +1,8 @@
 // src/commands/gambling/crash.js
 import { SlashCommandBuilder } from "discord.js";
-import { startCrash, tickCrash } from "../../utils/gamble/crashCore.js";
-import { createCrashEmbed } from "../../utils/gamble/crashEmbed.js";
-import { crashButtons } from "../../utils/gamble/crashButtons.js";
+import { startCrash, tickCrash } from "../../utils/gamble/crash/crashCore.js";
+import { createCrashEmbed } from "../../utils/gamble/crash/crashEmbed.js";
+import { crashButtons } from "../../utils/gamble/crash/crashButtons.js";
 
 export default {
   data: new SlashCommandBuilder()
