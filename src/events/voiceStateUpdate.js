@@ -1,5 +1,5 @@
 import { addVXP } from "../services/levelingService.js";
-import { readGuildDB, writeGuildDB } from "../utils/file.js";
+import { readGuildDB, writeGuildDB } from "../utils/core/file.js";
 
 export default {
   name: "voiceStateUpdate",
