@@ -3,7 +3,7 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { playSlot } from "../../utils/gamble/slotLogic.js";
 import { createSlotEmbed } from "../../utils/gamble/slotEmbed.js";
-import { readGuildDB, writeGuildDB } from "../../utils/file.js";
+import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
 import { getSlotSymbols } from "../../utils/gamble/slotSymbols.js";
 
 export default {
