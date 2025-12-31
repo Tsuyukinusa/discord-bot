@@ -1,6 +1,6 @@
 // messageCommands/gamble/coinflip.js
 import { EmbedBuilder } from "discord.js";
-import { playCoinflip } from "../../utils/gamble/coinflipCore.js";
+import { playCoinflip } from "../../utils/gamble/coinflip/coinflipCore.js";
 
 export default {
   name: "coinflip",
