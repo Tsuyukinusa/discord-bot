@@ -14,10 +14,10 @@ export default {
         // --- ユーザーデータ取得 ---
         const user = getUser(guildId, userId);
 
-        if (!user.money) user.money = 0;
+        if (!user.balance) user.balance = 0;
         if (!user.bank) user.bank = 0;
 
-        const total = user.money + user.bank;
+        const total = user.balance + user.bank;
 
         // --- ランキング計算 ---
         const allUsers = getAllUsers()[guildId] || {};
