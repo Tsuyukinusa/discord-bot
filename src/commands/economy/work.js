@@ -44,7 +44,7 @@ export default {
             ) + guild.settings.work.diamondMin;
 
         // --- 更新 ---
-        user.money += money;
+        user.balance += money;
         user.diamond += diamond;
         user.cooldowns.work = now;
 
