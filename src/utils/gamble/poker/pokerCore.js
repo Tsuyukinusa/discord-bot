@@ -1,7 +1,7 @@
 // utils/gamble/pokerCore.js
 import { createDeck, shuffle } from "./pokerDeck.js";
 import { judgePoker } from "./pokerLogic.js";
-import { readGuildDB, writeGuildDB } from "../file.js";
+import { readGuildDB, writeGuildDB } from "../utils/core/file.js";
 import { getPokerGame, savePokerGame, endPokerGame } from "./pokerStore.js";
 
 /* ======================
