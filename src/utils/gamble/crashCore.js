@@ -1,46 +1,29 @@
 // utils/gamble/crashCore.js
 import { readGuildDB, writeGuildDB } from "../file.js";
 
-const crashes = new Map(); // guildId => crashGame
+const crashes = new Map(); // guildId:userId => game
 
-/* ======================
-   クラッシュ開始
-====================== */
-export function startCrash(guildId) {
-  if (crashes.has(guildId)) {
-    return { error: "すでにクラッシュが進行中です" };
-  }
+function getKey(guildId, userId) {
+  return `${guildId}:${userId}`;
+}
 
-  const crashPoint = Math.max(1.01, Number((1 / Math.random()).toFixed(2)));
-
-  const game = {
-    open: true,
-    crashed: false,
-    multiplier: 1.0,
-    crashPoint,
-    players: []
-  };
-
-  crashes.set(guildId, game);
-  return game;
+function generateCrashPoint() {
+  // よくあるCrash式（低倍率が多くなる）
+  const r = Math.random();
+  return Math.max(1.01, Math.floor((1 / r) * 100) / 100);
 }
 
 /* ======================
-   参加
+   開始
 ====================== */
-export async function joinCrash({ guildId, userId, bet }) {
-  const game = crashes.get(guildId);
-  if (!game || !game.open) {
-    return { error: "クラッシュは開始されていません" };
-  }
-
-  if (game.players.find(p => p.userId === userId)) {
-    return { error: "すでに参加しています" };
+export async function startCrash({ guildId, userId, bet }) {
+  const key = getKey(guildId, userId);
+  if (crashes.has(key)) {
+    return { error: "すでにクラッシュが進行中です" };
   }
 
   const db = await readGuildDB();
   const user = db[guildId]?.users?.[userId];
-
   if (!user || user.money < bet) {
     return { error: "所持金が足りません" };
   }
@@ -48,70 +31,59 @@ export async function joinCrash({ guildId, userId, bet }) {
   user.money -= bet;
   await writeGuildDB(db);
 
-  game.players.push({
-    userId,
+  const game = {
     bet,
-    cashedOut: false,
-    cashoutAt: null
-  });
+    multiplier: 1.0,
+    crashPoint: generateCrashPoint(),
+    started: Date.now(),
+    finished: false
+  };
 
+  crashes.set(key, game);
   return game;
+}
+
+/* ======================
+   進行（倍率UP）
+====================== */
+export function tickCrash(guildId, userId) {
+  const key = getKey(guildId, userId);
+  const game = crashes.get(key);
+  if (!game || game.finished) return null;
+
+  game.multiplier = Math.round((game.multiplier + 0.01) * 100) / 100;
+
+  if (game.multiplier >= game.crashPoint) {
+    game.finished = true;
+    game.crashed = true;
+    crashes.delete(key);
+    return { crashed: true, game };
+  }
+
+  return { crashed: false, game };
 }
 
 /* ======================
    キャッシュアウト
 ====================== */
-export async function cashoutCrash({ guildId, userId }) {
-  const game = crashes.get(guildId);
-  if (!game || game.crashed) {
-    return { error: "すでにクラッシュしています" };
+export async function cashOut(guildId, userId) {
+  const key = getKey(guildId, userId);
+  const game = crashes.get(key);
+  if (!game || game.finished) {
+    return { error: "すでに終了しています" };
   }
 
-  const player = game.players.find(p => p.userId === userId);
-  if (!player || player.cashedOut) {
-    return { error: "キャッシュアウトできません" };
-  }
+  game.finished = true;
+  crashes.delete(key);
 
-  player.cashedOut = true;
-  player.cashoutAt = game.multiplier;
-
-  const win = Math.floor(player.bet * game.multiplier);
+  const win = Math.floor(game.bet * game.multiplier);
 
   const db = await readGuildDB();
   db[guildId].users[userId].money += win;
   await writeGuildDB(db);
 
-  return { multiplier: game.multiplier, win };
-}
-
-/* ======================
-   倍率更新（ループ用）
-====================== */
-export function tickCrash(guildId) {
-  const game = crashes.get(guildId);
-  if (!game || game.crashed) return null;
-
-  game.multiplier = Number((game.multiplier + 0.01).toFixed(2));
-
-  if (game.multiplier >= game.crashPoint) {
-    game.crashed = true;
-    game.open = false;
-    return { crashed: true, crashPoint: game.crashPoint };
-  }
-
-  return { crashed: false, multiplier: game.multiplier };
-}
-
-/* ======================
-   取得
-====================== */
-export function getCrash(guildId) {
-  return crashes.get(guildId);
-}
-
-/* ======================
-   終了
-====================== */
-export function endCrash(guildId) {
-  crashes.delete(guildId);
+  return {
+    win,
+    multiplier: game.multiplier
+  };
 }
