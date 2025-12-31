@@ -1,6 +1,7 @@
 import { readGuildDB, writeGuildDB } from "../file.js";
 
-const jackpots = new Map(); // guildId => jackpot
+const jackpots = new Map(); 
+// guildId => { hostId, entry, players, pot, open, timeoutId }
 
 /* ======================
    ジャックポット開始
@@ -15,7 +16,8 @@ export function startJackpot({ guildId, hostId, entry }) {
     entry,
     players: [],
     pot: 0,
-    open: true
+    open: true,
+    timeoutId: null
   };
 
   jackpots.set(guildId, jackpot);
@@ -31,7 +33,7 @@ export async function joinJackpot({ guildId, userId }) {
     return { error: "ジャックポットは開催されていません" };
   }
 
-  if (jackpot.players.find(p => p.userId === userId)) {
+  if (jackpot.players.some(p => p.userId === userId)) {
     return { error: "すでに参加しています" };
   }
 
@@ -42,12 +44,38 @@ export async function joinJackpot({ guildId, userId }) {
     return { error: "所持金が足りません" };
   }
 
+  // お金を引く
   user.money -= jackpot.entry;
   jackpot.players.push({ userId });
   jackpot.pot += jackpot.entry;
 
   await writeGuildDB(db);
+
+  // ★ 参加者が3人以上 & タイマー未設定なら自動締切開始
+  if (jackpot.players.length >= 3 && !jackpot.timeoutId) {
+    startRandomCloseTimer(guildId);
+  }
+
   return jackpot;
+}
+
+/* ======================
+   ランダム締切タイマー
+====================== */
+function startRandomCloseTimer(guildId) {
+  const jackpot = jackpots.get(guildId);
+  if (!jackpot) return;
+
+  const delay =
+    Math.floor(Math.random() * (120 - 30 + 1) + 30) * 1000;
+
+  jackpot.timeoutId = setTimeout(() => {
+    closeJackpot(guildId);
+  }, delay);
+
+  console.log(
+    `[Jackpot] ${guildId} will close in ${delay / 1000}s`
+  );
 }
 
 /* ======================
@@ -55,9 +83,15 @@ export async function joinJackpot({ guildId, userId }) {
 ====================== */
 export async function closeJackpot(guildId) {
   const jackpot = jackpots.get(guildId);
-  if (!jackpot) return null;
+  if (!jackpot || !jackpot.open) return null;
 
   jackpot.open = false;
+
+  // タイマー解除
+  if (jackpot.timeoutId) {
+    clearTimeout(jackpot.timeoutId);
+    jackpot.timeoutId = null;
+  }
 
   if (jackpot.players.length === 0) {
     jackpots.delete(guildId);
@@ -65,7 +99,9 @@ export async function closeJackpot(guildId) {
   }
 
   const winner =
-    jackpot.players[Math.floor(Math.random() * jackpot.players.length)];
+    jackpot.players[
+      Math.floor(Math.random() * jackpot.players.length)
+    ];
 
   const db = await readGuildDB();
   db[guildId].users[winner.userId].money += jackpot.pot;
@@ -79,6 +115,9 @@ export async function closeJackpot(guildId) {
   };
 }
 
+/* ======================
+   取得
+====================== */
 export function getJackpot(guildId) {
   return jackpots.get(guildId);
 }
