@@ -54,7 +54,7 @@ export default {
                             1)
                 ) + guild.settings.crime.diamondMin;
 
-            user.money += money;
+            user.balance += money;
             user.diamond += diamond;
 
             // カスタムリプライ
@@ -86,7 +86,7 @@ export default {
                             1)
                 ) + guild.settings.crime.failMoneyMin;
 
-            user.money -= failMoney;
+            user.balance -= failMoney;
             embedColor = 0xff0000;
 
             const list = guild.settings.replies.fail.crime;
