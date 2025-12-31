@@ -61,7 +61,7 @@ export default {
       delete user.stocks[stockId];
     }
 
-    user.money += totalPrice;
+    user.balance += totalPrice;
 
     await writeGuildDB(db);
 
