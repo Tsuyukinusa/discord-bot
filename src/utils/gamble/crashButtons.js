@@ -1,21 +1,11 @@
-import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle
-} from "discord.js";
+// utils/gamble/crashButtons.js
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
-/**
- * @param {Object} game
- * @param {boolean} game.running  クラッシュ進行中か
- * @param {boolean} game.cashedOut すでにキャッシュアウトしたか
- */
-export function crashButtons(game) {
-  const disabled = !game.running || game.cashedOut;
-
+export function crashButtons(disabled = false) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("crash-cashout")
-      .setLabel("💰 Cash Out")
+      .setLabel("💰 CASH OUT")
       .setStyle(ButtonStyle.Success)
       .setDisabled(disabled)
   );
