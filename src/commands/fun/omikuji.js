@@ -1,6 +1,6 @@
 // commands/fun/omikuji.js
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { readGuildDB, writeGuildDB } from "../../utils/file.js";
+import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
 import { readUserDB, writeUserDB } from "../../utils/userfile.js";
 
 export default {
