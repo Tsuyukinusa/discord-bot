@@ -4,7 +4,7 @@ import {
   playStand,
   playDouble,
   playSplit
-} from "../utils/gamble/blackjackCore.js";
+} from "../utils/gamble/blackjack/blackjackCore.js";
 import { createBlackjackEmbed } from "../utils/gamble/blackjackEmbed.js";
 import { blackjackButtons } from "../utils/gamble/blackjackButtons.js";
 import { getGame } from "../utils/gamble/blackjackStore.js";
