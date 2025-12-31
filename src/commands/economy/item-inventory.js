@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { getUser, updateUser } from "../../utils/userdb.js";
-import { getGuild } from "../../utils/guildDB.js";
+import { getUser, updateUser } from "../../utils/core/file.js";
+import { getGuild } from "../../utils/core/file.js";
 
 export default {
     data: new SlashCommandBuilder()
