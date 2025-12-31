@@ -3,7 +3,7 @@ import {
   joinJackpot,
   closeJackpot,
   getJackpot
-} from "../utils/gamble/jackpotCore.js";
+} from "../utils/gamble/jackpot/jackpotCore.js";
 import { createJackpotEmbed } from "../utils/gamble/jackpotEmbed.js";
 import { jackpotButtons } from "../utils/gamble/jackpotButtons.js";
 
