@@ -14,7 +14,7 @@ export async function playDice({
 
   if (!user) return { error: "ユーザーデータがありません" };
   if (bet <= 0) return { error: "賭け金が不正です" };
-  if (user.money < bet) return { error: "お金が足りません" };
+  if (user.balance < bet) return { error: "お金が足りません" };
 
   // ダイス数と賭け方の整合性
   if (
@@ -24,7 +24,7 @@ export async function playDice({
     return { error: "その賭け方はそのダイス数では使えません" };
   }
 
-  user.money -= bet;
+  user.balance -= bet;
 
   const dice = rollDice(diceCount);
   const sum = dice.reduce((a, b) => a + b, 0);
