@@ -39,7 +39,7 @@ export default {
             .addFields(
                 {
                     name: "💰 所持金（Wallet）",
-                    value: `**${user.money.toLocaleString()}**`,
+                    value: `**${user.balance.toLocaleString()}**`,
                     inline: true
                 },
                 {
