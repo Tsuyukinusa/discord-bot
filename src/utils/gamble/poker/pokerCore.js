@@ -1,6 +1,6 @@
-import { readGuildDB, writeGuildDB } from "../file.js";
+import { dealHand } from "./pokerDeck.js";
 import { judgePoker } from "./pokerLogic.js";
-import { drawPokerHand } from "./pokerCards.js";
+import { readGuildDB, writeGuildDB } from "../file.js";
 
 export async function playPoker({ guildId, userId, bet }) {
   const db = await readGuildDB();
@@ -10,13 +10,9 @@ export async function playPoker({ guildId, userId, bet }) {
     return { error: "所持金が足りません" };
   }
 
-  // 賭け金を先に引く
   user.money -= bet;
 
-  // カード生成
-  const hand = drawPokerHand();
-
-  // 判定
+  const hand = dealHand();
   const result = judgePoker(hand);
   const payout = Math.floor(bet * result.rate);
 
@@ -29,7 +25,7 @@ export async function playPoker({ guildId, userId, bet }) {
   return {
     hand,
     bet,
-    ...result,
+    result,
     payout
   };
 }
