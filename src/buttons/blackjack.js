@@ -6,8 +6,8 @@ import {
   playSplit
 } from "../utils/gamble/blackjack/blackjackCore.js";
 import { createBlackjackEmbed } from "../utils/gamble/blackjackEmbed.js";
-import { blackjackButtons } from "../utils/gamble/blackjackButtons.js";
-import { getGame } from "../utils/gamble/blackjackStore.js";
+import { blackjackButtons } from "../utils/gamble/blackjack/blackjackButtons.js";
+import { getGame } from "../utils/gamble/blackjack/blackjackStore.js";
 
 export default {
   customId: /^bj-(hit|stand|double|split)$/,
