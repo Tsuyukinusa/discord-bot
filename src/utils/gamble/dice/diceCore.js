@@ -1,5 +1,5 @@
 // utils/gamble/DiceCore.js
-import { readGuildDB, writeGuildDB } from "../file.js";
+import { readGuildDB, writeGuildDB } from "../utils/core/file.js";
 import { rollDice, judgeDice, getDicePayout } from "./diceLogic.js";
 
 export async function playDice({
