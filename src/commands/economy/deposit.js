@@ -19,7 +19,7 @@ export default {
         const amountRaw = interaction.options.getString("amount");
         const user = getUser(guildId, userId);
 
-        if (!user.money) user.money = 0;
+        if (!user.balance) user.balance = 0;
         if (!user.bank) user.bank = 0;
 
         let amount;
