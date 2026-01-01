@@ -1,86 +1,56 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { getUser, updateUser } from "../../utils/core/file.js";
+import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
+import { getBalance, subtractBalance } from "../../Services/economyServices.js";
 
 export default {
-    data: new SlashCommandBuilder()
-        .setName("deposit")
-        .setDescription("銀行にお金を預けます")
-        .addStringOption(option =>
-            option
-                .setName("amount")
-                .setDescription("預ける金額（数字 or all）")
-                .setRequired(true)
-        ),
+  data: new SlashCommandBuilder()
+    .setName("deposit")
+    .setDescription("銀行にお金を預けます")
+    .addStringOption(option =>
+      option
+        .setName("amount")
+        .setDescription("預ける金額（数字 or all）")
+        .setRequired(true)
+    ),
 
-    async execute(interaction) {
-        const guildId = interaction.guild.id;
-        const userId = interaction.user.id;
+  async execute(interaction) {
+    const guildId = interaction.guild.id;
+    const userId = interaction.user.id;
+    const amountRaw = interaction.options.getString("amount");
 
-        const amountRaw = interaction.options.getString("amount");
-        const user = getUser(guildId, userId);
+    const db = await readGuildDB();
+    const user = db[guildId].users[userId];
+    if (!user.bank) user.bank = 0;
 
-        if (!user.balance) user.balance = 0;
-        if (!user.bank) user.bank = 0;
+    const balance = await getBalance(guildId, userId);
 
-        let amount;
-
-        // --- all（全額）処理 ---
-        if (amountRaw.toLowerCase() === "all") {
-            amount = user.balance;
-            if (amount <= 0) {
-                return interaction.reply({
-                    content: "❌ 預けられるお金がありません。",
-                    ephemeral: true
-                });
-            }
-        } 
-        // --- 数字処理 ---
-        else {
-            amount = parseInt(amountRaw, 10);
-            if (isNaN(amount) || amount <= 0) {
-                return interaction.reply({
-                    content: "❌ 金額は正しい数字を入力してください。",
-                    ephemeral: true
-                });
-            }
-            if (amount > user.balance) {
-                return interaction.reply({
-                    content: "❌ 手持ちより多い金額は預けられません！",
-                    ephemeral: true
-                });
-            }
-        }
-
-        // --- お金移動 ---
-        user.balance -= amount;
-        user.bank += amount;
-        updateUser(guildId, userId, user);
-
-        // --- 埋め込みメッセージ ---
-        const embed = new EmbedBuilder()
-            .setTitle("🏦 入金完了")
-            .setColor("#00c3ff")
-            .setDescription(
-                `**${amount.toLocaleString()}** を銀行に預けました！`
-            )
-            .addFields(
-                {
-                    name: "💰 所持金（Wallet）",
-                    value: `${user.balance.toLocaleString()}`,
-                    inline: true
-                },
-                {
-                    name: "🏦 銀行（Bank）",
-                    value: `${user.bank.toLocaleString()}`,
-                    inline: true
-                },
-                {
-                    name: "📊 合計資産",
-                    value: `${(user.balance + user.bank).toLocaleString()}`,
-                    inline: false
-                }
-            )
-
-        await interaction.reply({ embeds: [embed] });
+    let amount;
+    if (amountRaw === "all") {
+      amount = balance;
+      if (amount <= 0) {
+        return interaction.reply({ content: "❌ 預けるお金がありません", ephemeral: true });
+      }
+    } else {
+      amount = Number(amountRaw);
+      if (isNaN(amount) || amount <= 0 || amount > balance) {
+        return interaction.reply({ content: "❌ 金額が不正です", ephemeral: true });
+      }
     }
+
+    await subtractBalance(guildId, userId, amount);
+    user.bank += amount;
+    await writeGuildDB(db);
+
+    return interaction.reply({
+      embeds: [
+        new EmbedBuilder()
+          .setTitle("🏦 入金完了")
+          .setColor("#00c3ff")
+          .addFields(
+            { name: "💰 Wallet", value: `${balance - amount}`, inline: true },
+            { name: "🏦 Bank", value: `${user.bank}`, inline: true }
+          )
+      ]
+    });
+  }
 };
