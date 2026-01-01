@@ -1,11 +1,14 @@
-
-import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import {
+    SlashCommandBuilder,
+    EmbedBuilder,
+    PermissionFlagsBits
+} from "discord.js";
 import { getGuild, updateGuild } from "../../utils/core/file.js";
 
 export default {
     data: new SlashCommandBuilder()
         .setName("item-edit")
-        .setDescription("アイテム情報を変更します（管理者専用）")
+        .setDescription("アイテム情報を変更します（管理者 or 作成者）")
         .addStringOption(opt =>
             opt.setName("id")
                 .setDescription("編集するアイテムID")
@@ -26,6 +29,7 @@ export default {
 
     async execute(interaction) {
         const guildId = interaction.guild.id;
+        const userId = interaction.user.id;
         const id = interaction.options.getString("id");
 
         const newName = interaction.options.getString("name");
@@ -43,9 +47,28 @@ export default {
 
         const item = guild.items[id];
 
+        // ================================
+        // 🔒 権限チェック
+        // 管理者 or 作成者のみ
+        // ================================
+        const isAdmin = interaction.member.permissions.has(
+            PermissionFlagsBits.ManageGuild
+        );
+        const isCreator = item.creator === userId;
+
+        if (!isAdmin && !isCreator) {
+            return interaction.reply({
+                content: "❌ このアイテムを編集できるのは管理者または作成者のみです。",
+                ephemeral: true
+            });
+        }
+
+        // ================================
+        // ✏ 編集処理
+        // ================================
         if (newName) item.name = newName;
-        if (newSell !== null) item.sell = newSell;
-        if (newEffect) item.effect = newEffect;
+        if (newSell !== null) item.sellPrice = newSell;
+        if (newEffect) item.effectMessage = newEffect;
 
         updateGuild(guildId, guild);
 
@@ -53,12 +76,20 @@ export default {
             .setTitle("🛠 アイテムを更新しました")
             .setColor("#00ff88")
             .addFields(
-                { name: "ID", value: id, inline: true },
-                { name: "名前", value: item.name, inline: true },
-                { name: "売値", value: String(item.sell), inline: true },
-                { name: "効果", value: item.effect || "なし", inline: false }
-            );
+                { name: "🆔 ID", value: id, inline: true },
+                { name: "📛 名前", value: item.name, inline: true },
+                { name: "💰 売値", value: String(item.sellPrice), inline: true },
+                {
+                    name: "🎬 効果メッセージ",
+                    value: item.effectMessage || "なし",
+                    inline: false
+                }
+            )
+            .setTimestamp();
 
-        return interaction.reply({ embeds: [embed] });
+        return interaction.reply({
+            embeds: [embed],
+            ephemeral: true
+        });
     }
 };
