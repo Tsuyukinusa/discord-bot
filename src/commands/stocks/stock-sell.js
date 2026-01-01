@@ -1,4 +1,4 @@
-// commands/stocks/stock-sell.js
+// src/commands/stocks/stock-sell.js
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
 
@@ -27,7 +27,20 @@ export default {
 
     const db = await readGuildDB();
 
-    // --- 基本チェック ---
+    // --- ギルド / ユーザー初期化 ---
+    if (!db[guildId]) db[guildId] = {};
+    if (!db[guildId].users) db[guildId].users = {};
+    if (!db[guildId].users[userId]) {
+      db[guildId].users[userId] = {
+        balance: 0,
+        bank: 0,
+        stocks: {}
+      };
+    }
+
+    const user = db[guildId].users[userId];
+
+    // --- 株チェック ---
     const stock = db[guildId]?.stocks?.[stockId];
     if (!stock) {
       return interaction.reply({
@@ -36,14 +49,7 @@ export default {
       });
     }
 
-    if (!db[guildId].users) db[guildId].users = {};
-    if (!db[guildId].users[userId]) {
-      db[guildId].users[userId] = { money: 0, stocks: {} };
-    }
-
-    const user = db[guildId].users[userId];
     if (!user.stocks) user.stocks = {};
-
     const owned = user.stocks[stockId] || 0;
 
     if (owned < amount) {
@@ -61,15 +67,16 @@ export default {
       delete user.stocks[stockId];
     }
 
+    // ✅ balance に統一
     user.balance += totalPrice;
 
     await writeGuildDB(db);
 
     // --- 通貨記号 ---
     const currency =
-      db[guildId].currency?.symbol ?? "¥";
+      db[guildId]?.economy?.currency ?? "💰";
 
-    // --- 埋め込み ---
+    // --- Embed ---
     const embed = new EmbedBuilder()
       .setColor("#ff5252")
       .setTitle("📉 株式売却完了")
@@ -78,9 +85,9 @@ export default {
         { name: "売却数", value: `${amount} 株`, inline: true },
         { name: "株価", value: `${currency}${stock.price}`, inline: true },
         { name: "受取金額", value: `${currency}${totalPrice}`, inline: false },
-        { name: "残り保有数", value: `${user.stocks[stockId] || 0} 株`, inline: false }
+        { name: "残り保有数", value: `${user.stocks[stockId] || 0} 株`, inline: false },
+        { name: "💰 現在の所持金", value: `${currency}${user.balance}`, inline: false }
       )
-      .setFooter({ text: "株式市場は変動します" })
       .setTimestamp();
 
     return interaction.reply({
