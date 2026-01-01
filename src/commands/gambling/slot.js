@@ -1,9 +1,12 @@
-
-// src/commands/gambling/slot.js
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { playSlot } from "../../utils/gamble/slot/slotLogic.js";
 import { createSlotEmbed } from "../../utils/gamble/slot/slotEmbed.js";
-import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
+import {
+  canAfford,
+  subtractBalance,
+  addBalance
+} from "../../Services/economyServices.js";
+import { readGuildDB } from "../../utils/core/file.js";
 
 export default {
   data: new SlashCommandBuilder()
@@ -21,10 +24,7 @@ export default {
     const userId = interaction.user.id;
     const bet = interaction.options.getInteger("bet");
 
-    const db = await readGuildDB();
-    const user = db[guildId]?.users?.[userId];
-
-    if (!user || user.balance < bet) {
+    if (!(await canAfford(guildId, userId, bet))) {
       return interaction.reply({
         embeds: [
           new EmbedBuilder()
@@ -35,7 +35,9 @@ export default {
       });
     }
 
-    const symbols = getSlotSymbols(guildId);
+    const db = await readGuildDB();
+    const symbols = db[guildId]?.slotSymbols;
+
     if (!symbols || symbols.length === 0) {
       return interaction.reply({
         embeds: [
@@ -47,21 +49,22 @@ export default {
       });
     }
 
-    // 実行
-    user.balance -= bet;
+    // 賭け金を引く
+    await subtractBalance(guildId, userId, bet);
+
     const result = playSlot({ bet, symbols });
 
     if (result.win) {
-      user.balance += result.payout;
+      await addBalance(guildId, userId, result.payout);
     }
 
-    await writeGuildDB(db);
-
-    const embed = createSlotEmbed({
-      ...result,
-      bet
+    return interaction.reply({
+      embeds: [
+        createSlotEmbed({
+          ...result,
+          bet
+        })
+      ]
     });
-
-    return interaction.reply({ embeds: [embed] });
   }
 };
