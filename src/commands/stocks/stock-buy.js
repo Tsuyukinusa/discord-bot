@@ -57,7 +57,7 @@ export default {
     }
 
     // 💰 お金を引く
-    user.money -= totalCost;
+    user.balance -= totalCost;
 
     // 📈 株を加算
     user.stocks[stockId] = (user.stocks[stockId] || 0) + amount;
