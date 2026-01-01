@@ -1,42 +1,30 @@
 import {
-  hasMoney,
-  takeMoney,
-  addMoney,
-  getUser
-} from "../../../services/economyService.js";
+  canAfford,
+  subtractBalance,
+  addBalance,
+  getBalance
+} from "../../../Services/economyServices.js";
 
-export async function playCoinflip({
-  guildId,
-  userId,
-  bet,
-  choice // "heads" | "tails"
-}) {
-  if (bet <= 0) return { error: "無効な金額です" };
-
-  if (!(await hasMoney(guildId, userId, bet))) {
+export async function playCoinflip({ guildId, userId, bet, choice }) {
+  if (bet <= 0) return { error: "賭け金が不正です" };
+  if (!(await canAfford(guildId, userId, bet))) {
     return { error: "お金が足りません" };
   }
 
-  // 先に支払い
-  await takeMoney(guildId, userId, bet);
+  await subtractBalance(guildId, userId, bet);
 
   const result = Math.random() < 0.5 ? "heads" : "tails";
   const win = result === choice;
 
-  let profit = -bet;
-
   if (win) {
-    await addMoney(guildId, userId, bet * 2);
-    profit = bet;
+    await addBalance(guildId, userId, bet * 2);
   }
-
-  const user = await getUser(guildId, userId);
 
   return {
     win,
     result,
     bet,
-    profit,
-    balance: user.balance
+    profit: win ? bet : -bet,
+    balance: await getBalance(guildId, userId)
   };
 }
