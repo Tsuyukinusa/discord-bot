@@ -40,8 +40,7 @@ export default {
                     { name: "XP増加", value: "xp" },
                     { name: "VXP増加", value: "vxp" },
                     { name: "ロール付与", value: "role" },
-                    { name: "ガチャダイヤ", value: "gacha" },
-                    { name: "ペット用アイテム", value: "pet" }
+                    { name: "ガチャダイヤ", value: "gacha" }
                 )
         )
         .addIntegerOption(opt =>
