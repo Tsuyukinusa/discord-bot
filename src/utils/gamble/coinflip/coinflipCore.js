@@ -1,41 +1,21 @@
-// utils/gamble/coinflipCore.js
+// services/economyServices.js
 import { readGuildDB, writeGuildDB } from "../utils/core/file.js";
 
-export function playCoinflip({
-  guildId,
-  userId,
-  bet,
-  choice // "heads" | "tails"
-}) {
-  const user = getUser(guildId, userId);
+export async function getBalance(guildId, userId) {
+  const db = await readGuildDB();
+  return db[guildId]?.users?.[userId]?.balance ?? 0;
+}
 
-  if (!user || user.balance < bet || bet <= 0) {
-    return { error: "お金が足りません" };
-  }
+export async function addBalance(guildId, userId, amount) {
+  const db = await readGuildDB();
+  db[guildId].users[userId].balance += amount;
+  await writeGuildDB(db);
+}
 
-  // 🔽 先に賭け金を引く
-  user.balance -= bet;
-
-  const result = Math.random() < 0.5 ? "heads" : "tails";
-  const win = result === choice;
-
-  let profit = 0;
-
-  if (win) {
-    // 🔼 勝ったら2倍返し
-    user.balance += bet * 2;
-    profit = bet;
-  } else {
-    profit = -bet;
-  }
-
-  saveUser(guildId, userId, user);
-
-  return {
-    win,
-    result,
-    bet,
-    profit,        // +bet or -bet
-    money: user.balance
-  };
+export async function subtractBalance(guildId, userId, amount) {
+  const db = await readGuildDB();
+  if (db[guildId].users[userId].balance < amount) return false;
+  db[guildId].users[userId].balance -= amount;
+  await writeGuildDB(db);
+  return true;
 }
