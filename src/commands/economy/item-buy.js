@@ -1,159 +1,95 @@
 // src/commands/economy/item-buy.js
 import {
-    SlashCommandBuilder,
-    EmbedBuilder
+  SlashCommandBuilder,
+  EmbedBuilder
 } from "discord.js";
 import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
+import {
+  getBalance,
+  canAfford,
+  subtractBalance
+} from "../../Services/economyServices.js";
 
 export default {
-    data: new SlashCommandBuilder()
-        .setName("item-buy")
-        .setDescription("アイテムを購入します")
-        .addStringOption(opt =>
-            opt.setName("id")
-                .setDescription("購入するアイテムID")
-                .setRequired(true)
-        )
-        .addIntegerOption(opt =>
-            opt.setName("amount")
-                .setDescription("購入数（ロールは1固定）")
-                .setMinValue(1)
-                .setRequired(false)
-        ),
+  data: new SlashCommandBuilder()
+    .setName("item-buy")
+    .setDescription("アイテムを購入します")
+    .addStringOption(opt =>
+      opt.setName("id")
+        .setDescription("購入するアイテムID")
+        .setRequired(true)
+    )
+    .addIntegerOption(opt =>
+      opt.setName("amount")
+        .setDescription("購入数（ロールは1固定）")
+        .setMinValue(1)
+    ),
 
-    async execute(interaction) {
-        const guildId = interaction.guild.id;
-        const userId = interaction.user.id;
+  async execute(interaction) {
+    const guildId = interaction.guild.id;
+    const userId = interaction.user.id;
 
-        const itemId = interaction.options.getString("id");
-        const amountInput = interaction.options.getInteger("amount") ?? 1;
+    const itemId = interaction.options.getString("id");
+    const amountInput = interaction.options.getInteger("amount") ?? 1;
 
-        const db = await readGuildDB();
+    const db = await readGuildDB();
+    const item = db[guildId]?.items?.[itemId];
 
-        if (!db[guildId]?.items) {
-            return interaction.reply({
-                content: "❌ このサーバーにはアイテムが登録されていません。",
-                ephemeral: true
-            });
-        }
-
-        const item = db[guildId].items[itemId];
-        if (!item) {
-            return interaction.reply({
-                content: "❌ 指定したアイテムは存在しません。",
-                ephemeral: true
-            });
-        }
-
-        // --- ユーザー初期化 ---
-        if (!db[guildId].users) db[guildId].users = {};
-        if (!db[guildId].users[userId]) {
-            db[guildId].users[userId] = {
-                balance: 0,
-                inventory: {}
-            };
-        }
-
-        const user = db[guildId].users[userId];
-        if (typeof user.balance !== "number") user.balance = 0;
-        if (!user.inventory) user.inventory = {};
-
-        const currency = db[guildId].currency?.symbol ?? "¥";
-
-        // ロールは必ず1個
-        const buyAmount = item.type === "role" ? 1 : amountInput;
-
-        // ================================
-        // 🎖 ロールアイテム処理
-        // ================================
-        if (item.type === "role") {
-            if (typeof item.cost !== "number") {
-                return interaction.reply({
-                    content: "❌ このロールアイテムは価格が設定されていません。",
-                    ephemeral: true
-                });
-            }
-
-            const role = interaction.guild.roles.cache.get(item.roleId);
-            if (!role) {
-                return interaction.reply({
-                    content: "❌ このロールは現在存在しません。",
-                    ephemeral: true
-                });
-            }
-
-            const member = interaction.member;
-            if (member.roles.cache.has(role.id)) {
-                return interaction.reply({
-                    content: "❌ あなたはすでにこのロールを持っています。",
-                    ephemeral: true
-                });
-            }
-
-            if (user.balance < item.cost) {
-                return interaction.reply({
-                    content: `❌ 所持金が足りません。（必要: ${currency}${item.cost}）`,
-                    ephemeral: true
-                });
-            }
-
-            user.balance -= item.cost;
-            await member.roles.add(role.id);
-            await writeGuildDB(db);
-
-            const embed = new EmbedBuilder()
-                .setColor("#00ff9d")
-                .setTitle("🎖 ロール購入完了")
-                .setDescription(`ロール **${role.name}** を付与しました！`)
-                .addFields(
-                    { name: "消費金額", value: `${currency}${item.cost}`, inline: true },
-                    { name: "残り所持金", value: `${currency}${user.balance}`, inline: true }
-                )
-                .setTimestamp();
-
-            return interaction.reply({ embeds: [embed] });
-        }
-
-        // ================================
-        // 🛒 通常アイテム購入処理
-        // ================================
-        const totalCost = item.cost * buyAmount;
-
-        if (user.balance < totalCost) {
-            return interaction.reply({
-                content: `❌ 所持金が足りません。（必要: ${currency}${totalCost}）`,
-                ephemeral: true
-            });
-        }
-
-        if (typeof item.stock === "number" && item.stock < buyAmount) {
-            return interaction.reply({
-                content: `❌ 在庫が不足しています。（現在: ${item.stock}）`,
-                ephemeral: true
-            });
-        }
-
-        user.balance -= totalCost;
-        if (typeof item.stock === "number") item.stock -= buyAmount;
-
-        user.inventory[itemId] = (user.inventory[itemId] || 0) + buyAmount;
-
-        await writeGuildDB(db);
-
-        const embed = new EmbedBuilder()
-            .setColor("#00aaff")
-            .setTitle("🛒 アイテム購入完了")
-            .addFields(
-                { name: "アイテム", value: `${item.name} × ${buyAmount}` },
-                { name: "消費金額", value: `${currency}${totalCost}` },
-                { name: "残り所持金", value: `${currency}${user.balance}` },
-                {
-                    name: "在庫",
-                    value: typeof item.stock === "number" ? `${item.stock}` : "∞"
-                }
-            )
-            .setTimestamp();
-
-        return interaction.reply({ embeds: [embed] });
+    if (!item) {
+      return interaction.reply({
+        content: "❌ 指定したアイテムは存在しません。",
+        ephemeral: true
+      });
     }
+
+    // ユーザー初期化
+    if (!db[guildId].users) db[guildId].users = {};
+    if (!db[guildId].users[userId]) {
+      db[guildId].users[userId] = { balance: 0, inventory: {} };
+    }
+
+    const currency = db[guildId].currency?.symbol ?? "¥";
+    const buyAmount = item.type === "role" ? 1 : amountInput;
+    const totalCost = item.cost * buyAmount;
+
+    // 💰 残高チェック（services）
+    if (!(await canAfford(guildId, userId, totalCost))) {
+      return interaction.reply({
+        content: `❌ 所持金が足りません。（必要: ${currency}${totalCost}）`,
+        ephemeral: true
+      });
+    }
+
+    // 📦 在庫チェック
+    if (typeof item.stock === "number" && item.stock < buyAmount) {
+      return interaction.reply({
+        content: `❌ 在庫が不足しています。（現在: ${item.stock}）`,
+        ephemeral: true
+      });
+    }
+
+    // 💸 支払い
+    await subtractBalance(guildId, userId, totalCost);
+
+    // 在庫・インベントリ処理
+    if (typeof item.stock === "number") item.stock -= buyAmount;
+    db[guildId].users[userId].inventory[itemId] =
+      (db[guildId].users[userId].inventory[itemId] || 0) + buyAmount;
+
+    await writeGuildDB(db);
+
+    const balance = await getBalance(guildId, userId);
+
+    const embed = new EmbedBuilder()
+      .setColor("#00aaff")
+      .setTitle("🛒 アイテム購入完了")
+      .addFields(
+        { name: "アイテム", value: `${item.name} × ${buyAmount}` },
+        { name: "消費金額", value: `${currency}${totalCost}` },
+        { name: "残り所持金", value: `${currency}${balance}` }
+      )
+      .setTimestamp();
+
+    return interaction.reply({ embeds: [embed] });
+  }
 };
