@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
-import { getBalance, subtractBalance } from "../../Services/economyServices.js";
+import { getBalance } from "../../Services/economyServices.js";
 
 export default {
   data: new SlashCommandBuilder()
@@ -19,26 +19,47 @@ export default {
     const amountRaw = interaction.options.getString("amount");
 
     const db = await readGuildDB();
+
+    // --- ユーザー初期化 ---
+    if (!db[guildId]) db[guildId] = {};
+    if (!db[guildId].users) db[guildId].users = {};
+    if (!db[guildId].users[userId]) {
+      db[guildId].users[userId] = {
+        balance: 0,
+        bank: 0
+      };
+    }
+
     const user = db[guildId].users[userId];
-    if (!user.bank) user.bank = 0;
+    if (typeof user.bank !== "number") user.bank = 0;
+    if (typeof user.balance !== "number") user.balance = 0;
 
-    const balance = await getBalance(guildId, userId);
+    const balance = user.balance;
 
+    // --- 金額処理 ---
     let amount;
     if (amountRaw === "all") {
       amount = balance;
       if (amount <= 0) {
-        return interaction.reply({ content: "❌ 預けるお金がありません", ephemeral: true });
+        return interaction.reply({
+          content: "❌ 預けるお金がありません。",
+          ephemeral: true
+        });
       }
     } else {
       amount = Number(amountRaw);
       if (isNaN(amount) || amount <= 0 || amount > balance) {
-        return interaction.reply({ content: "❌ 金額が不正です", ephemeral: true });
+        return interaction.reply({
+          content: "❌ 金額が不正です。",
+          ephemeral: true
+        });
       }
     }
 
-    await subtractBalance(guildId, userId, amount);
+    // --- 処理 ---
+    user.balance -= amount;
     user.bank += amount;
+
     await writeGuildDB(db);
 
     return interaction.reply({
@@ -47,9 +68,10 @@ export default {
           .setTitle("🏦 入金完了")
           .setColor("#00c3ff")
           .addFields(
-            { name: "💰 Wallet", value: `${balance - amount}`, inline: true },
+            { name: "💰 Wallet", value: `${user.balance}`, inline: true },
             { name: "🏦 Bank", value: `${user.bank}`, inline: true }
           )
+          .setTimestamp()
       ]
     });
   }
