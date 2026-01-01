@@ -1,4 +1,3 @@
-
 import {
   SlashCommandBuilder,
   PermissionFlagsBits,
@@ -9,7 +8,7 @@ import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
 export default {
   data: new SlashCommandBuilder()
     .setName("reseteconomy")
-    .setDescription("経済システムを初期状態にリセットします（管理者のみ）")
+    .setDescription("経済システムと全ユーザーの所持金を完全にリセットします（管理者のみ）")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
@@ -17,21 +16,24 @@ export default {
 
     const db = await readGuildDB();
     if (!db[guildId]) db[guildId] = {};
+    if (!db[guildId].users) db[guildId].users = {};
 
-    // 🔧 経済データ完全リセット（クールダウン秒単位）
+    /* ======================
+       経済設定リセット
+    ====================== */
+    const startBalance = 1000;
+
     db[guildId].economy = {
       enabled: false,
       currency: "💰",
-      startBalance: 1000,
+      startBalance,
 
-      // ⏱ 秒単位
       cooldowns: {
-        work: 60,     // 10秒
-        slut: 60,     // 20秒
-        crime: 60,    // 30秒
+        work: 60,
+        slut: 60,
+        crime: 60,
       },
 
-      // 💎 ダイヤも min/max 対応
       income: {
         work:  { min: 1500, max: 2000, diamond: { min: 1, max: 5 } },
         slut:  { min: 2300, max: 2800, diamond: { min: 7, max: 12 } },
@@ -53,28 +55,30 @@ export default {
       customReplies: {}
     };
 
+    /* ======================
+       全ユーザー所持金リセット
+    ====================== */
+    let resetCount = 0;
+
+    for (const userId in db[guildId].users) {
+      db[guildId].users[userId].balance = startBalance;
+      resetCount++;
+    }
+
     await writeGuildDB(db);
 
-    // --- Embed ---
+    /* ======================
+       Embed
+    ====================== */
     const embed = new EmbedBuilder()
-      .setTitle("🔄 経済システムをリセットしました")
-      .setDescription("すべての経済設定が **初期状態** に戻りました。")
+      .setTitle("🔄 経済システム完全リセット")
+      .setDescription(
+        "経済設定と **全ユーザーの所持金** を初期状態に戻しました。"
+      )
       .setColor(0x00A6FF)
       .addFields(
-        { name: "💰 初期所持金", value: "100", inline: true },
-        {
-          name: "⏱ クールダウン（秒）",
-          value: "• work: 10秒\n• slut: 20秒\n• crime: 30秒",
-          inline: true
-        },
-        {
-          name: "💎 ダイヤ報酬（初期値）",
-          value:
-            "• work: 1〜3\n" +
-            "• slut: 2〜5\n" +
-            "• crime: 3〜7",
-          inline: true
-        }
+        { name: "💰 初期所持金", value: `${startBalance}`, inline: true },
+        { name: "👥 リセット人数", value: `${resetCount} 人`, inline: true }
       )
       .setTimestamp();
 
