@@ -66,7 +66,7 @@ export async function finalizePoker(guildId, userId) {
   const user = db[guildId].users[userId];
 
   if (payout > 0) {
-    user.money += payout;
+    user.balance += payout;
   }
 
   game.finished = true;
