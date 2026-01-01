@@ -52,7 +52,7 @@ export default {
     const result = playSlot({ bet, symbols });
 
     if (result.win) {
-      user.money += result.payout;
+      user.balance += result.payout;
     }
 
     await writeGuildDB(db);
