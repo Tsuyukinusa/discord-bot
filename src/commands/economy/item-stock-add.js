@@ -4,7 +4,12 @@ import {
   EmbedBuilder,
   PermissionFlagsBits
 } from "discord.js";
+
 import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
+import {
+  canAfford,
+  subtractBalance
+} from "../../Services/economyServices.js";
 
 export default {
   data: new SlashCommandBuilder()
@@ -31,7 +36,7 @@ export default {
 
     const db = await readGuildDB();
 
-    // --- アイテム存在チェック ---
+    // --- ギルド & アイテム存在チェック ---
     if (!db[guildId]?.items?.[itemId]) {
       return interaction.reply({
         content: "❌ そのアイテムは存在しません。",
@@ -44,7 +49,7 @@ export default {
     // --- ロールアイテムは在庫不可 ---
     if (item.type === "role") {
       return interaction.reply({
-        content: "❌ ロール付与アイテムには在庫の概念がありません。",
+        content: "❌ ロールアイテムには在庫の概念がありません。",
         ephemeral: true
       });
     }
@@ -60,42 +65,36 @@ export default {
       });
     }
 
-    // --- ユーザー初期化 ---
-    if (!db[guildId].users) db[guildId].users = {};
-    if (!db[guildId].users[userId]) {
-      db[guildId].users[userId] = {
-        balance: 0,
-        inventory: {}
-      };
-    }
-
-    const user = db[guildId].users[userId];
-
     // --- 原価計算 ---
     const costTotal = item.cost * amount;
 
-    if (user.balance < costTotal) {
+    // --- 残高チェック（economyServices） ---
+    const affordable = await canAfford(guildId, userId, costTotal);
+    if (!affordable) {
       return interaction.reply({
-        content: `❌ 所持金が足りません。\n必要金額：${costTotal}`,
+        content: `❌ 残高が足りません。\n必要金額：**${costTotal.toLocaleString()}**`,
         ephemeral: true
       });
     }
 
-    // --- 支払い & 在庫追加 ---
-    user.balance -= costTotal;
+    // --- 支払い（economyServices） ---
+    await subtractBalance(guildId, userId, costTotal);
+
+    // --- 在庫初期化 & 追加 ---
+    if (typeof item.stock !== "number") item.stock = 0;
     item.stock += amount;
 
     await writeGuildDB(db);
 
-    // --- 返信 ---
+    // --- Embed ---
     const embed = new EmbedBuilder()
       .setColor("#4b9aff")
       .setTitle("📦 在庫追加完了")
       .addFields(
         { name: "🆔 アイテムID", value: itemId, inline: true },
-        { name: "📄 名前", value: item.name, inline: true },
+        { name: "📄 アイテム名", value: item.name, inline: true },
         { name: "➕ 追加数", value: `${amount}`, inline: true },
-        { name: "💵 消費金額", value: `${costTotal}`, inline: true },
+        { name: "💵 消費金額", value: `${costTotal.toLocaleString()}`, inline: true },
         { name: "📦 現在の在庫", value: `${item.stock}`, inline: true }
       )
       .setTimestamp();
