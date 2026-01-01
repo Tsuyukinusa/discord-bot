@@ -1,18 +1,25 @@
 // src/commands/economy/pay.js
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { getUser, updateUser } from "../../utils/core/file.js";
+import {
+  getBalance,
+  canAfford,
+  subtractBalance,
+  addBalance
+} from "../../Services/economyServices.js";
 
 export default {
   data: new SlashCommandBuilder()
     .setName("pay")
     .setDescription("指定したユーザーにお金を送金します")
-    .addUserOption(opt =>
-      opt.setName("user")
+    .addUserOption(option =>
+      option
+        .setName("user")
         .setDescription("送金相手")
         .setRequired(true)
     )
-    .addStringOption(opt =>
-      opt.setName("amount")
+    .addStringOption(option =>
+      option
+        .setName("amount")
         .setDescription("送金額（数字 or all）")
         .setRequired(true)
     ),
@@ -20,10 +27,10 @@ export default {
   async execute(interaction) {
     const guildId = interaction.guild.id;
     const senderId = interaction.user.id;
+
     const targetUser = interaction.options.getUser("user");
     const amountInput = interaction.options.getString("amount");
 
-    // 自分自身に送金不可
     if (targetUser.id === senderId) {
       return interaction.reply({
         content: "❌ 自分自身には送金できません。",
@@ -31,74 +38,65 @@ export default {
       });
     }
 
-    // --- ユーザーデータ取得 & 初期化 ---
-    const sender = getUser(guildId, senderId) ?? { money: 0 };
-    const receiver = getUser(guildId, targetUser.id) ?? { money: 0 };
+    // --- 残高取得 ---
+    const senderBalance = await getBalance(guildId, senderId);
 
-    sender.money ??= 0;
-    receiver.money ??= 0;
-
-    // --- 金額処理 ---
     let amount;
 
+    // --- 金額計算 ---
     if (amountInput.toLowerCase() === "all") {
-      amount = sender.money;
+      amount = senderBalance;
     } else {
       amount = Number(amountInput);
-      if (!Number.isInteger(amount) || amount <= 0) {
+      if (isNaN(amount) || amount <= 0) {
         return interaction.reply({
-          content: "❌ 金額は正の数字で入力してください。",
+          content: "❌ 金額は正しい数字を入力してください。",
           ephemeral: true
         });
       }
     }
 
-    if (amount <= 0) {
+    // --- 残高チェック ---
+    if (!(await canAfford(guildId, senderId, amount))) {
       return interaction.reply({
-        content: "❌ 送金できる金額がありません。",
-        ephemeral: true
-      });
-    }
-
-    if (amount > sender.money) {
-      return interaction.reply({
-        content: `❌ 所持金が足りません。\n現在の所持金：**${sender.money.toLocaleString()}**`,
+        content: `❌ 残高が足りません。\n現在の残高：**${senderBalance.toLocaleString()}**`,
         ephemeral: true
       });
     }
 
     // --- 送金処理 ---
-    sender.money -= amount;
-    receiver.money += amount;
+    await subtractBalance(guildId, senderId, amount);
+    await addBalance(guildId, targetUser.id, amount);
 
-    updateUser(guildId, senderId, sender);
-    updateUser(guildId, targetUser.id, receiver);
+    const newSenderBalance = senderBalance - amount;
+    const receiverBalance = await getBalance(guildId, targetUser.id);
 
     // --- 埋め込み ---
     const embed = new EmbedBuilder()
       .setColor("#00c3ff")
       .setTitle("💸 送金完了")
       .setDescription(
-        `**${interaction.user.username}** → **${targetUser.username}**\n\n` +
-        `💰 **${amount.toLocaleString()}**`
+        `**${interaction.user.username}** → **${targetUser.username}** に送金しました`
       )
       .addFields(
         {
-          name: "あなたの残高",
-          value: `👜 ${sender.money.toLocaleString()}`,
+          name: "💰 送金額",
+          value: `${amount.toLocaleString()}`,
           inline: true
         },
         {
-          name: "相手の残高",
-          value: `👜 ${receiver.money.toLocaleString()}`,
+          name: "📌 あなたの残高",
+          value: `${newSenderBalance.toLocaleString()}`,
+          inline: true
+        },
+        {
+          name: "📌 相手の残高",
+          value: `${receiverBalance.toLocaleString()}`,
           inline: true
         }
       )
       .setTimestamp();
 
-    return interaction.reply({
-      embeds: [embed],
-      ephemeral: true // 公開したければ消してOK
-    });
+    return interaction.reply({ embeds: [embed] });
   }
 };
