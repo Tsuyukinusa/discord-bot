@@ -23,7 +23,7 @@ export function playCoinflip({
 
   if (win) {
     // 🔼 勝ったら2倍返し
-    user.money += bet * 2;
+    user.balance += bet * 2;
     profit = bet;
   } else {
     profit = -bet;
@@ -36,6 +36,6 @@ export function playCoinflip({
     result,
     bet,
     profit,        // +bet or -bet
-    money: user.money
+    money: user.balance
   };
 }
