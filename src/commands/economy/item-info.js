@@ -20,7 +20,7 @@ export default {
 
         const db = await readGuildDB();
 
-        if (!db[guildId] || !db[guildId].items || !db[guildId].items[itemId]) {
+        if (!db[guildId]?.items?.[itemId]) {
             return interaction.reply({
                 content: "❌ 指定されたアイテムは存在しません。",
                 ephemeral: true
@@ -29,22 +29,35 @@ export default {
 
         const item = db[guildId].items[itemId];
 
+        // ペット系を削除した定義
         const typeNames = {
             xp: "XP増加",
             vxp: "VXP増加",
             role: "ロール付与",
-            gacha: "ガチャダイヤ",
-            pet: "ペット用アイテム"
+            gacha: "ガチャダイヤ"
         };
 
         const embed = new EmbedBuilder()
             .setColor("#2b8cff")
             .setTitle(`📦 アイテム情報：${item.name}`)
             .addFields(
-                { name: "🆔 ID", value: itemId },
-                { name: "🎨 作成者", value: `<@${item.creator}>` },
-                { name: "📄 種類", value: typeNames[item.type] || item.type },
-                { name: "📝 説明", value: item.description || "（なし）" }
+                { name: "🆔 ID", value: itemId, inline: true },
+                { name: "🎨 作成者", value: `<@${item.creator}>`, inline: true },
+                { name: "📄 種類", value: typeNames[item.type] ?? item.type, inline: true },
+                { name: "📝 説明", value: item.description || "（なし）" },
+                {
+                    name: "💰 売値",
+                    value: item.sellPrice !== null ? `${item.sellPrice}` : "なし",
+                    inline: true
+                },
+                {
+                    name: "📦 在庫",
+                    value:
+                        typeof item.stock === "number"
+                            ? `${item.stock}`
+                            : "∞（無制限）",
+                    inline: true
+                }
             )
             .setFooter({ text: "アイテム詳細" })
             .setTimestamp();
