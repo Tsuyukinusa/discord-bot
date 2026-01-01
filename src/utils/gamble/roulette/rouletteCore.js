@@ -41,7 +41,7 @@ export async function joinRoulette({ guildId, userId, bet }) {
   }
 
   // 支払い
-  user.money -= amount;
+  user.balance -= amount;
   roulette.bets.push({
     userId,
     type: bet.type,
