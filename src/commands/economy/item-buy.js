@@ -134,7 +134,7 @@ export default {
             .addFields(
                 { name: "アイテム", value: `${item.name} × ${amount}` },
                 { name: "消費金額", value: `${totalCost} コイン` },
-                { name: "残り所持金", value: `${user.money} コイン` },
+                { name: "残り所持金", value: `${user.balance} コイン` },
                 { name: "在庫", value: `${item.stock}` }
             );
 
