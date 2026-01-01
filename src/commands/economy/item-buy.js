@@ -29,15 +29,14 @@ export default {
 
         const db = await readGuildDB();
 
-        if (!db[guildId] || !db[guildId].items) {
+        if (!db[guildId]?.items) {
             return interaction.reply({
-                content: "❌ このサーバーにはアイテムがありません。",
+                content: "❌ このサーバーにはアイテムが登録されていません。",
                 ephemeral: true
             });
         }
 
         const item = db[guildId].items[itemId];
-
         if (!item) {
             return interaction.reply({
                 content: "❌ 指定したアイテムは存在しません。",
@@ -45,19 +44,24 @@ export default {
             });
         }
 
-        // ユーザーの所持金とインベントリを初期化
+        // --- ユーザー初期化 ---
         if (!db[guildId].users) db[guildId].users = {};
         if (!db[guildId].users[userId]) {
             db[guildId].users[userId] = {
-                money: 0,
-                inventory: {}
+                balance: 0,
+                inventory: {},
+                stocks: {}
             };
         }
 
         const user = db[guildId].users[userId];
+        if (typeof user.balance !== "number") user.balance = 0;
+        if (!user.inventory) user.inventory = {};
+
+        const currency = db[guildId].currency?.symbol ?? "¥";
 
         // ================================
-        // 🔹 ロール付与アイテム特別処理
+        // 🎖 ロールアイテム処理
         // ================================
         if (item.type === "role") {
             const roleId = item.roleId;
@@ -70,8 +74,8 @@ export default {
                 });
             }
 
-            // すでにロールを持っている
             const member = interaction.member;
+
             if (member.roles.cache.has(roleId)) {
                 return interaction.reply({
                     content: "❌ あなたはすでにこのロールを持っています。",
@@ -79,64 +83,74 @@ export default {
                 });
             }
 
-            // キャッシュバック（売値返金）
-            user.balance += item.sellPrice;
+            if (user.balance < item.cost) {
+                return interaction.reply({
+                    content: `❌ 所持金が足りません。（必要: ${currency}${item.cost}）`,
+                    ephemeral: true
+                });
+            }
 
+            // 💰 支払い
+            user.balance -= item.cost;
+
+            // 🎖 ロール付与
             await member.roles.add(roleId);
 
             await writeGuildDB(db);
 
             const embed = new EmbedBuilder()
                 .setColor("#00ff9d")
-                .setTitle("🎖 ロールアイテム購入")
+                .setTitle("🎖 ロール購入完了")
                 .setDescription(`ロール **${role.name}** を付与しました！`)
                 .addFields(
-                    { name: "返金額", value: `${item.sellPrice} コイン`, inline: true },
-                    { name: "あなたの新しい所持金", value: `${user.balance} コイン`, inline: true }
-                );
+                    { name: "消費金額", value: `${currency}${item.cost}`, inline: true },
+                    { name: "残り所持金", value: `${currency}${user.balance}`, inline: true }
+                )
+                .setTimestamp();
 
             return interaction.reply({ embeds: [embed] });
         }
 
         // ================================
-        // 🔹 通常アイテム購入処理
+        // 🛒 通常アイテム購入処理
         // ================================
-
         const totalCost = item.cost * amount;
 
         if (user.balance < totalCost) {
             return interaction.reply({
-                content: `❌ 所持金が足りません。必要: ${totalCost}コイン`,
+                content: `❌ 所持金が足りません。（必要: ${currency}${totalCost}）`,
                 ephemeral: true
             });
         }
 
-        if (item.stock < amount) {
+        if (typeof item.stock === "number" && item.stock < amount) {
             return interaction.reply({
-                content: `❌ 在庫が不足しています（現在: ${item.stock}）`,
+                content: `❌ 在庫が不足しています。（現在: ${item.stock}）`,
                 ephemeral: true
             });
         }
 
         // 購入処理
         user.balance -= totalCost;
-        item.stock -= amount;
+        if (typeof item.stock === "number") item.stock -= amount;
 
-        if (!user.inventory[itemId]) user.inventory[itemId] = 0;
-        user.inventory[itemId] += amount;
+        user.inventory[itemId] = (user.inventory[itemId] || 0) + amount;
 
         await writeGuildDB(db);
 
-        // 埋め込み返す
         const embed = new EmbedBuilder()
             .setColor("#00aaff")
-            .setTitle("🛒 アイテム購入完了！")
+            .setTitle("🛒 アイテム購入完了")
             .addFields(
                 { name: "アイテム", value: `${item.name} × ${amount}` },
-                { name: "消費金額", value: `${totalCost} コイン` },
-                { name: "残り所持金", value: `${user.balance} コイン` },
-                { name: "在庫", value: `${item.stock}` }
-            );
+                { name: "消費金額", value: `${currency}${totalCost}` },
+                { name: "残り所持金", value: `${currency}${user.balance}` },
+                {
+                    name: "在庫",
+                    value: typeof item.stock === "number" ? `${item.stock}` : "∞"
+                }
+            )
+            .setTimestamp();
 
         return interaction.reply({ embeds: [embed] });
     }
