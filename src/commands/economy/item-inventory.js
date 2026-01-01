@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { getUser, updateUser } from "../../utils/core/file.js";
-import { getGuild } from "../../utils/core/file.js";
+import { getUser, getGuild } from "../../utils/core/file.js";
 
 export default {
     data: new SlashCommandBuilder()
@@ -11,35 +10,40 @@ export default {
         const guildId = interaction.guild.id;
         const userId = interaction.user.id;
 
+        // --- データ取得 ---
         const user = getUser(guildId, userId);
         const guild = getGuild(guildId);
 
-        // インベントリが空なら
-        if (!user.inventory || Object.keys(user.inventory).length === 0) {
+        // 安全初期化
+        if (!user.inventory) user.inventory = {};
+        if (!guild.items) guild.items = {};
+
+        // インベントリ空チェック
+        if (Object.keys(user.inventory).length === 0) {
+            const emptyEmbed = new EmbedBuilder()
+                .setTitle("🎒 インベントリ")
+                .setColor("#ffb6c1")
+                .setDescription("所持アイテムがありません。")
+                .setTimestamp();
+
             return interaction.reply({
-                embeds: [
-                    new EmbedBuilder()
-                        .setTitle("🎒 インベントリ")
-                        .setColor("#ffb6c1")
-                        .setDescription("所持アイテムがありません。")
-                ]
+                embeds: [emptyEmbed],
+                ephemeral: true
             });
         }
 
-        const items = guild.items || {};
-
-        // インベントリをリスト化
+        // --- 表示用テキスト生成 ---
         let list = "";
         for (const itemId in user.inventory) {
             const count = user.inventory[itemId];
-            const data = items[itemId];
+            const item = guild.items[itemId];
 
-            if (!data) continue; // アイテムが削除されていた場合
+            if (!item) continue; // 削除済みアイテムは無視
 
-            list += `**${data.name}** × ${count}\n`;
+            list += `**${item.name}** × ${count}\n`;
         }
 
-        if (list === "") list = "所持アイテムがありません。";
+        if (!list) list = "所持アイテムがありません。";
 
         const embed = new EmbedBuilder()
             .setTitle(`🎒 ${interaction.user.username} のインベントリ`)
@@ -48,8 +52,8 @@ export default {
             .setTimestamp();
 
         return interaction.reply({
-    embeds: [embed],
-    ephemeral: true   // ← ★ここを追加するだけ！
-});
+            embeds: [embed],
+            ephemeral: true
+        });
     }
 };
