@@ -52,7 +52,7 @@ export default {
         }
 
         // --- お金移動 ---
-        user.money -= amount;
+        user.balance -= amount;
         user.bank += amount;
         updateUser(guildId, userId, user);
 
