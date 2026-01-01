@@ -72,4 +72,4 @@ for (const file of eventFiles) {
 }
 
 // ▼ Bot ログイン
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.TOKEN);
