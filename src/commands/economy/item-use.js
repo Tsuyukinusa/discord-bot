@@ -21,7 +21,7 @@ export default {
 
     const db = await readGuildDB();
 
-    // --- 基本チェック ---
+    // --- アイテム存在チェック ---
     if (!db[guildId]?.items?.[itemId]) {
       return interaction.reply({
         content: "❌ そのアイテムは存在しません。",
@@ -31,7 +31,7 @@ export default {
 
     const item = db[guildId].items[itemId];
 
-    // --- ロールアイテムは use 不可 ---
+    // --- ロール系は use 不可 ---
     if (item.type === "role") {
       return interaction.reply({
         content: "❌ ロールアイテムは使用できません。（購入時に自動付与されます）",
@@ -39,19 +39,21 @@ export default {
       });
     }
 
-    // --- ユーザー初期化 ---
+    // --- ユーザーデータ初期化（economyServices互換） ---
     if (!db[guildId].users) db[guildId].users = {};
     if (!db[guildId].users[userId]) {
       db[guildId].users[userId] = {
         balance: 0,
         xp: 0,
         vxp: 0,
-        diamond: 0,
+        diamonds: 0,
         inventory: {}
       };
     }
 
     const user = db[guildId].users[userId];
+
+    // --- 所持チェック ---
     if (!user.inventory[itemId] || user.inventory[itemId] <= 0) {
       return interaction.reply({
         content: "❌ そのアイテムを所持していません。",
@@ -76,7 +78,7 @@ export default {
         break;
 
       case "gacha":
-        user.diamond += item.effectValue;
+        user.diamonds += item.effectValue;
         effectResult = `💎 ダイヤを **${item.effectValue} 個** 獲得しました`;
         break;
 
@@ -84,7 +86,7 @@ export default {
         effectResult = "⚠️ このアイテムの効果は未定義です";
     }
 
-    // --- 消費 ---
+    // --- 消費処理 ---
     user.inventory[itemId] -= 1;
     if (user.inventory[itemId] <= 0) {
       delete user.inventory[itemId];
@@ -98,7 +100,7 @@ export default {
     const embed = new EmbedBuilder()
       .setColor("#00c8ff")
       .setTitle(`🎉 アイテム使用：${item.name}`)
-      .setDescription(item.effectMessage || item.description || " ")
+      .setDescription(item.description || " ")
       .addFields({
         name: "✨ 効果",
         value: effectResult
@@ -107,4 +109,4 @@ export default {
 
     return interaction.reply({ embeds: [embed] });
   }
-}; 
+};
