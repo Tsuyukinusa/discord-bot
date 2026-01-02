@@ -1,6 +1,6 @@
 // src/commands/admin/addmoney.js
 import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
-import { addBalance } from "../../services/economyServices.js";
+import { addBalance } from "../../services/economyService.js";
 
 export const data = new SlashCommandBuilder()
   .setName("addmoney")
