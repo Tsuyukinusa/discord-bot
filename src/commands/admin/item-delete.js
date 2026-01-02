@@ -9,6 +9,8 @@ export default {
             opt.setName("itemid")
                 .setDescription("削除するアイテムID")
                 .setRequired(true)
+                .setMinLength(1)
+                .setMaxLength(50)
         ),
 
     async execute(interaction) {
