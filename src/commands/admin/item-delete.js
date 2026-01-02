@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from "discord.js";
-import { getGuild, updateGuild } from "../../utils/core/file.js";
+import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
 
 export default {
     data: new SlashCommandBuilder()
@@ -16,7 +16,7 @@ export default {
         const userId = interaction.user.id;
         const itemId = interaction.options.getString("itemid");
 
-        const guild = getGuild(guildId);
+        const guild = readGuildDB(guildId);
 
         // --- アイテムが存在しない ---
         if (!guild.items || !guild.items[itemId]) {
@@ -44,7 +44,7 @@ export default {
 
         // --- アイテム削除 ---
         delete guild.items[itemId];
-        updateGuild(guildId, guild);
+        writeGuildDB(guildId, guild);
 
         // --- 埋め込み ---
         const embed = new EmbedBuilder()
