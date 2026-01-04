@@ -30,7 +30,6 @@ export async function execute(interaction) {
       ephemeral: true
     });
   }
-
   await addBalance(guildId, user.id, amount);
 
   return interaction.reply({
