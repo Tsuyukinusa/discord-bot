@@ -18,3 +18,5 @@ export default {
     const symbol = interaction.options.getString("symbol");
 
     const db = await readGuildDB();
+  }
+}
