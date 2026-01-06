@@ -9,7 +9,8 @@ export default {
             opt.setName("count")
                 .setDescription("極凶を引いた回数")
                 .setRequired(true)
-                .setMinValue(1)
+                .setMinLength(1)
+                .setMaxLength(50)
         ),
 
     async execute(interaction) {
