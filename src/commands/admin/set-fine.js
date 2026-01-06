@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from "discord.js";
-import { getGuild, updateGuild } from "../../utils/core/file.js";
+import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
 
 export default {
     data: new SlashCommandBuilder()
@@ -52,13 +52,13 @@ export default {
         }
 
         // ===== Guild データ読み込み =====
-        const guild = getGuild(guildId);
+        const guild = readGuildDB(guildId);
 
         // ===== 設定更新 =====
         guild.settings[command].fineMin = min;
         guild.settings[command].fineMax = max;
 
-        updateGuild(guildId, guild);
+        writeGuildDB(guildId, guild);
 
         // ===== 成功 Embed =====
         const successEmbed = new EmbedBuilder()
