@@ -36,3 +36,5 @@ export function writeUserDB(userId, data) {
   const file = path.join(userDBPath, `${userId}.json`);
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 }
+export {readGuildDB as getGuild}
+export {writeGuildDB as updateGuild}
