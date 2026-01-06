@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from "discord.js";
-import { getGuild, updateGuild } from "../../utils/core/file.js";
+import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
 
 export default {
     data: new SlashCommandBuilder()
@@ -35,11 +35,11 @@ export default {
             return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
         }
 
-        const guild = getGuild(guildId);
+        const guild = readGuildDB(guildId);
 
         guild[cmd].failRate = percent;
 
-        updateGuild(guildId, guild);
+        writeGuildDB(guildId, guild);
 
         const successEmbed = new EmbedBuilder()
             .setColor("Green")
