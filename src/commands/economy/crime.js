@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { getGuild } from "../../utils/core/file.js";
+import { readGuildDB } from "../../utils/core/file.js";
 import { getUser, updateUser } from "../../utils/core/file.js";
 
 export default {
@@ -11,7 +11,7 @@ export default {
         const guildId = interaction.guild.id;
         const userId = interaction.user.id;
 
-        const guild = getGuild(guildId);
+        const guild = readGuildDB(guildId);
         const user = getUser(guildId, userId);
 
         const now = Date.now();
