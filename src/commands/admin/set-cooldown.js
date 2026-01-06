@@ -3,7 +3,7 @@ import {
     PermissionFlagsBits,
     EmbedBuilder
 } from "discord.js";
-import { getGuild, updateGuild } from "../../utils/core/file.js";
+import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
 
 export default {
     data: new SlashCommandBuilder()
@@ -40,12 +40,12 @@ export default {
             return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
         }
 
-        const guild = getGuild(guildId);
+        const guild = readGuildDB(guildId);
 
         // 秒 → ミリ秒へ変換
         guild.cooldowns[target] = seconds * 1000;
 
-        updateGuild(guildId, guild);
+        writeGuildDB(guildId, guild);
 
         const embed = new EmbedBuilder()
             .setColor(0x00aaff)
