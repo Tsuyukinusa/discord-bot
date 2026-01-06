@@ -8,7 +8,7 @@ import {
   getBalance,
   canAfford,
   subtractBalance
-} from "../../Services/economyServices.js";
+} from "../../services/economyService.js";
 
 export default {
   data: new SlashCommandBuilder()
