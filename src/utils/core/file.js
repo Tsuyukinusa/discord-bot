@@ -38,3 +38,5 @@ export function writeUserDB(userId, data) {
 }
 export {readGuildDB as getGuild}
 export {writeGuildDB as updateGuild}
+export {readUserDB as getUser}
+export {writeUserDB as updateUser}
