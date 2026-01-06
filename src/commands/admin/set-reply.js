@@ -3,7 +3,7 @@ import {
     PermissionFlagsBits,
     EmbedBuilder
 } from "discord.js";
-import { getGuild, updateGuild } from "../../utils/core/file.js";
+import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
 
 export default {
     data: new SlashCommandBuilder()
@@ -60,10 +60,10 @@ export default {
             });
         }
 
-        const guild = getGuild(guildId);
+        const guild = readGuildDB(guildId);
 
         guild.settings.replies[type][category].push(message);
-        updateGuild(guildId, guild);
+        writeGuildDB(guildId, guild);
 
         // 成功したあとの埋め込み
         const embed = new EmbedBuilder()
