@@ -1,1 +1,1 @@
-export * from "./../services/economyService.js"
+export * from "../services/economyService.js"
