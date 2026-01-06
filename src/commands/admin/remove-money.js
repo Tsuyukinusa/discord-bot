@@ -1,6 +1,6 @@
 // src/commands/admin/removemoney.js
 import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
-import { getBalance, subtractBalance } from "../../Services/economyServices.js";
+import { getBalance, subtractBalance } from "../../services/economyServices.js";
 
 export const data = new SlashCommandBuilder()
   .setName("removemoney")
