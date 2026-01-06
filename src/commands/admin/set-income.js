@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
-import { getGuild, updateGuild } from "../../utils/core/file.js";
+import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
 
 export default {
     data: new SlashCommandBuilder()
@@ -47,13 +47,13 @@ export default {
             return interaction.reply("❌ **min <= max の形式で設定してください。**");
         }
 
-        const guild = getGuild(guildId);
+        const guild = readGuildDB(guildId);
 
         // --- 対象を更新 ---
         guild.settings[command][`${type}Min`] = min;
         guild.settings[command][`${type}Max`] = max;
 
-        updateGuild(guildId, guild);
+        writeGuildDB(guildId, guild);
 
         return interaction.reply(
             `✅ **${command} の ${type} 報酬を更新しました！**\n` +
