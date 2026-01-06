@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
-import { getBalance } from "../../Services/economyServices.js";
+import { getBalance } from "../../services/economyService.js";
 
 export default {
   data: new SlashCommandBuilder()
