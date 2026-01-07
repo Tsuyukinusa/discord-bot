@@ -8,6 +8,7 @@ import {
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import express from "express";
 
 // ES Modules 用の __dirname 再現
 const __filename = fileURLToPath(import.meta.url);
@@ -79,8 +80,6 @@ for (const file of eventFiles) {
 if (process.env.DEPLOY_COMMANDS === "true") {
   await import("./deploy-commands.js");
 }
-
-import express from "express";
 
 const app=express();
 app.get("/",function(req,res){
