@@ -57,7 +57,7 @@ export function finishGame(guildId, userId) {
   const game = getGame(guildId, userId);
   if (game) game.finished = true;
 }
-
+export {finishGame as endGame}
 /**
  * ゲーム削除（終了後）
  */
