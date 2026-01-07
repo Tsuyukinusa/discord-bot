@@ -80,5 +80,11 @@ if (process.env.DEPLOY_COMMANDS === "true") {
   await import("./deploy-commands.js");
 }
 
+import express from "express";
+
+const app = express();
+app.get("/", (_, res) => res.send("OK"));
+app.listen(process.env.PORT || 3000);
+
 // ▼ Bot ログイン
 client.login(process.env.TOKEN);
