@@ -19,6 +19,14 @@ export function calcHand(hand) {
       total += Number(v);
     }
   }
+  // A を 11 → 1 に調整（バースト回避）
+  while (total > 21 && aceCount > 0) {
+    total -= 10;
+    aceCount--;
+  }
+
+  return total;
+}
 const SUITS = ["♠", "♥", "♦", "♣"];
 const VALUES = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
 
@@ -59,14 +67,6 @@ export function calcHand(hand) {
   }
 
   // A を 11 → 1 に切り替えてバースト回避
-  while (total > 21 && aceCount > 0) {
-    total -= 10;
-    aceCount--;
-  }
-
-  return total;
-}
-  // A を 11 → 1 に調整（バースト回避）
   while (total > 21 && aceCount > 0) {
     total -= 10;
     aceCount--;
