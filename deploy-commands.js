@@ -26,6 +26,7 @@ async function loadCommands(dir) {
         command.data.setDescription(command.data.description||"説明なし");
         try {
           // ★ここで toJSON を試す
+          console.log("🔍 登録中:", command.data.name);
           const json = command.data.toJSON();
           commands.push(json);
         } catch (e) {
