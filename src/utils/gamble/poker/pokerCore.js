@@ -21,6 +21,7 @@ export async function playPoker({ guildId, userId, bet }) {
   savePokerGame(guildId, userId, game);
   return game;
 }
+export {playPoker as startPoker}
 
 export async function finalizePoker(guildId, userId) {
   const game = getPokerGame(guildId, userId);
