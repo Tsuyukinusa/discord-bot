@@ -22,8 +22,10 @@ async function loadCommands(dir) {
       const command = commandModule.default;
 
       if (command?.data) {
-        console.log("🔍 コマンド確認:", fullPath);
-        console.log(command.data);
+        if(command.data.description==""){
+          console.log("🔍 コマンド確認:", fullPath);
+          console.log(command.data);
+        }
         commands.push(command.data.toJSON());
       }
     }
