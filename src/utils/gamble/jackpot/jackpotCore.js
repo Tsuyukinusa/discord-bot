@@ -33,3 +33,25 @@ export async function closeJackpot(guildId) {
 
   return { winnerId: winner.userId, pot: jackpot.pot };
 }
+export function startJackpot({ guildId, hostId, entry }) {
+  if (jackpots.has(guildId)) {
+    return { error: "すでにジャックポットが開催中です" };
+  }
+
+  const jackpot = {
+    guildId,
+    hostId,
+    entry,
+    players: [{ userId: hostId }],
+    pot: entry,
+    startedAt: Date.now(),
+    finished: false
+  };
+
+  jackpots.set(guildId, jackpot);
+  return jackpot;
+}
+
+export function getJackpot(guildId) {
+  return jackpots.get(guildId) ?? null;
+}
