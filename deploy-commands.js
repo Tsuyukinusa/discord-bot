@@ -20,19 +20,14 @@ async function loadCommands(dir) {
     } else if (file.name.endsWith(".js")) {
       const commandModule = await import(fullPath);
       const command = commandModule.default;
-
       if (command?.data) {
-        command.data.setName(command.data.name.slice(0,30));
-        command.data.setDescription(command.data.description||"説明なし");
         try {
-          // ★ここで toJSON を試す
-          console.log("🔍 登録中:", command.data.name);
           const json = command.data.toJSON();
           commands.push(json);
         } catch (e) {
           console.error("❌ toJSON 失敗コマンド:", fullPath);
           console.error(e);
-          throw e; // ← どこで落ちたか即分かる
+          throw e;
         }
       }
     }
