@@ -53,4 +53,7 @@ export async function closeRoulette(guildId) {
   roulettes.delete(guildId);
   return result;
 }
-  
+
+export function getRoulette(guildId) {
+  return roulettes.get(guildId) ?? null;
+}
