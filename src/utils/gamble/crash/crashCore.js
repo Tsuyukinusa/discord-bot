@@ -34,3 +34,4 @@ export async function cashOut(guildId, userId) {
 
   return { win, multiplier: game.multiplier };
 }
+export {cashOut as tickCrash}
