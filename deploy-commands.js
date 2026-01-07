@@ -41,7 +41,7 @@ try {
   console.log("🚀 Discord にコマンドを登録中...");
 
   await rest.put(
-    Routes.applicationCommands(clientId),
+    Routes.applicationCommands(clientId,"1410512467720802347"),
     { body: commands }
   );
 
