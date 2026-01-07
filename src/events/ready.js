@@ -1,5 +1,5 @@
 import rankSelectHandler from "../selects/rankSelect.js";
-import { startStockUpdater } from "../utils/stockUpdater.js";
+import { startStockUpdater } from "../utils/stock/stockUpdater.js";
 
 export default {
   name: "ready",
