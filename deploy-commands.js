@@ -22,8 +22,8 @@ async function loadCommands(dir) {
       const command = commandModule.default;
 
       if (command?.data) {
-        command.data.name=command.data.name.slice(0,30);
-        command.data.description=command.data.description||"説明なし";
+        command.data.setName(command.data.name.slice(0,30));
+        command.data.setDescription(command.data.description||"説明なし");
         console.log("🔍 コマンド確認:", fullPath);
         console.log(!!command.data.description,command.data);
         commands.push(command.data.toJSON());
