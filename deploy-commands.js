@@ -41,10 +41,9 @@ try {
   console.log("🚀 Discord にコマンドを登録中...");
 
   await rest.put(
-    Routes.applicationCommands(clientId,"1410512467720802347"),
+    Routes.applicationGuildCommands(clientId, "1410512467720802347"),
     { body: commands }
   );
-
   console.log("✅ コマンド登録完了！");
 } catch (error) {
   console.error("❌ エラー:", error);
