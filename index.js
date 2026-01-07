@@ -76,5 +76,9 @@ for (const file of eventFiles) {
 
 }
 
+if (process.env.DEPLOY_COMMANDS === "true") {
+  await import("./deploy-commands.js");
+}
+
 // ▼ Bot ログイン
 client.login(process.env.TOKEN);
