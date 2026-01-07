@@ -4,7 +4,7 @@ import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
 
 export default {
     data: new SlashCommandBuilder()
-        .setName("omikuji-config-add-item-reward")
+        .setName("omikuji-add-item-reward")
         .setDescription("報酬アイテムを追加します（管理者専用）")
         .addStringOption(o =>
             o.setName("result")
