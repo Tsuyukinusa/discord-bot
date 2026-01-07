@@ -22,7 +22,7 @@ async function loadCommands(dir) {
       const command = commandModule.default;
 
       if (command?.data) {
-        if(command.data.description==""){
+        if(!command.data.description){
           console.log("🔍 コマンド確認:", fullPath);
           console.log(command.data);
         }
