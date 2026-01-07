@@ -23,7 +23,7 @@ async function loadCommands(dir) {
 
       if (command?.data) {
         console.log("🔍 コマンド確認:", fullPath);
-        console.log(command.data.description);
+        console.log(!!command.data.description,command.data);
         commands.push(command.data.toJSON());
       }
     }
