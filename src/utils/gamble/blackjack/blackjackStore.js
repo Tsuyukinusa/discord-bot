@@ -39,7 +39,7 @@ export function addCard(guildId, userId, target, card) {
     game.dealerHand.push(card);
   }
 }
-
+export {addCard as saveGame}
 /**
  * デッキから1枚引く
  */
