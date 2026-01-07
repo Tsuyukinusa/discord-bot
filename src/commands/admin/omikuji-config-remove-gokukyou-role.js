@@ -9,7 +9,6 @@ export default {
             opt.setName("count")
                 .setDescription("極凶を引いた回数")
                 .setRequired(true)
-                .setRequired(true)
                 .setMinValue(1)
                 .setMaxValue(50)
         ),
