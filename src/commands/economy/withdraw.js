@@ -7,7 +7,7 @@ export default {
     .setName("withdraw")
     .setDescription("銀行から引き出します")
     .addStringOption(o =>
-      o.setName("amount").setRequired(true)
+      o.setName("amount").setDescription("金額").setRequired(true)
     ),
 
   async execute(interaction) {
