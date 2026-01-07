@@ -82,9 +82,12 @@ if (process.env.DEPLOY_COMMANDS === "true") {
 
 import express from "express";
 
-const app = express();
-app.get("/", (_, res) => res.send("OK"));
-app.listen(process.env.PORT || 3000);
-
+const app=express();
+app.get("/",function(req,res){
+  res.send("alive");
+});
+app.listen(process.env.PORT||3000,function(){
+  console.log("");
+});
 // ▼ Bot ログイン
 client.login(process.env.TOKEN);
