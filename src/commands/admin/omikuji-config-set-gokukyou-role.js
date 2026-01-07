@@ -3,7 +3,7 @@ import { readGuildDB, writeGuildDB } from "../../utils/core/file.js";
 
 export default {
     data: new SlashCommandBuilder()
-        .setName("omikuji-config-set-gokukyou-role")
+        .setName("omikuji-set-gokukyou-role")
         .setDescription("極凶ロール設定を追加または更新します（管理者専用）")
         .addIntegerOption(opt =>
             opt.setName("count")
