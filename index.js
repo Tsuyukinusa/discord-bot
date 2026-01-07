@@ -65,10 +65,12 @@ for (const file of eventFiles) {
   if(!event){
     console.warn(`⚠️ default export がありません: ${file}`);
   }
-  if (event&&event.once) {
-    client.once(event.name, (...args) => event.execute(...args, client));
-  } else {
-    client.on(event.name, (...args) => event.execute(...args, client));
+  else{
+    if (event.once) {
+      client.once(event.name, (...args) => event.execute(...args, client));
+    } else {
+      client.on(event.name, (...args) => event.execute(...args, client));
+    }
   }
 
   console.log(`✔ Loaded event: ${event.name}`);
