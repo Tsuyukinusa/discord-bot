@@ -7,7 +7,7 @@ import { createDeck, shuffle } from "./pokerDeck.js";
 import { judgePoker } from "./pokerLogic.js";
 import { getPokerGame, savePokerGame, endPokerGame } from "./pokerStore.js";
 
-export async function startPoker({ guildId, userId, bet }) {
+export async function playPoker({ guildId, userId, bet }) {
   if (!(await canAfford(guildId, userId, bet))) {
     return { error: "所持金が足りません" };
   }
