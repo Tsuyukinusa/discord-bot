@@ -1,7 +1,7 @@
 // src/Stores/BlackjackStore.js
 
 const blackjackGames = new Map();
-
+export { startBlackjack } from "blackjackCode.js";
 /**
  * ゲーム作成
  */
