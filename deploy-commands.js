@@ -40,7 +40,6 @@ const commands = await loadCommands(commandsPath);
 console.log(`📦 読み込んだコマンド数: ${commands.length}`);
 
 const rest = new REST({ version: "10" }).setToken(token);
-/*
 try {
   console.log("🚀 Discord にコマンドを登録中...");
 
@@ -52,4 +51,3 @@ try {
 } catch (error) {
   console.error("❌ エラー:", error);
 }
-*/
