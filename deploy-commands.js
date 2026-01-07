@@ -24,8 +24,15 @@ async function loadCommands(dir) {
       if (command?.data) {
         command.data.setName(command.data.name.slice(0,30));
         command.data.setDescription(command.data.description||"説明なし");
-        console.log("🔍 コマンド確認:", fullPath);
-        console.log(!!command.data.description,command.data.name.length);
+        try {
+          // ★ここで toJSON を試す
+          const json = command.data.toJSON();
+          commands.push(json);
+        } catch (e) {
+          console.error("❌ toJSON 失敗コマンド:", fullPath);
+          console.error(e);
+          throw e; // ← どこで落ちたか即分かる
+        }
         commands.push(command.data.toJSON());
       }
     }
