@@ -1,5 +1,5 @@
 import { readGuildDB, writeGuildDB } from "../utils/core/file.js";
-import { getBalance, subtractBalance, addBalance } from "./economyServices.js";
+import { getBalance, subtractBalance, addBalance } from "./economyService.js";
 
 /* 株一覧取得 */
 export async function getStocks(guildId) {
