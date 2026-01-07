@@ -33,7 +33,6 @@ async function loadCommands(dir) {
           console.error(e);
           throw e; // ← どこで落ちたか即分かる
         }
-        commands.push(command.data.toJSON());
       }
     }
   }
