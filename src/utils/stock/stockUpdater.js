@@ -1,5 +1,5 @@
 // utils/stockUpdater.js
-import { readGuildDB, writeGuildDB } from "../utils/core/file.js";
+import { readGuildDB, writeGuildDB } from "../core/file.js";
 
 export async function startStockUpdater(client) {
   setInterval(async () => {
