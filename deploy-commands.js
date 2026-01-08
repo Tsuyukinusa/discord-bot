@@ -41,6 +41,13 @@ const commands = await loadCommands(commandsPath);
 commands.forEach((cmd, i) => {
   console.log(i, cmd.name);
 });
+const seen = new Set();
+commands.forEach(cmd => {
+  if (seen.has(cmd.name)) {
+    throw new Error(`❌ 重複コマンド名: ${cmd.name}`);
+  }
+  seen.add(cmd.name);
+});
 console.log(`📦 読み込んだコマンド数: ${commands.length}`);
 const rest = new REST({ version: "10" }).setToken(token);
 try {
