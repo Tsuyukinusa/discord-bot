@@ -38,7 +38,9 @@ async function loadCommands(dir) {
 
 const commandsPath = path.join(process.cwd(), "src", "commands");
 const commands = await loadCommands(commandsPath);
-
+commands.forEach((cmd, i) => {
+  console.log(i, cmd.name);
+});
 console.log(`📦 読み込んだコマンド数: ${commands.length}`);
 const rest = new REST({ version: "10" }).setToken(token);
 try {
