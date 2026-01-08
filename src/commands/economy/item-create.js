@@ -50,14 +50,14 @@ export default {
                 .setMinValue(0)
         )
         .addIntegerOption(opt =>
-            opt.setName("cost")
-                .setDescription("原価（ロール以外必須）")
-                .setRequired(false)
-        )
-        .addIntegerOption(opt =>
             opt.setName("effect")
                 .setDescription("効果量（数字）")
                 .setRequired(true)
+        )
+        .addIntegerOption(opt =>
+            opt.setName("cost")
+                .setDescription("原価（ロール以外必須）")
+                .setRequired(false)
         )
         .addRoleOption(opt =>
             opt.setName("role")
