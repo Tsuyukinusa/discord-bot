@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { readGuildDB } from "../../utils/core/file.js";
+import { readGuildDB, readUserDB } from "../../utils/core/file.js";
+
 
 export default {
   data: new SlashCommandBuilder()
@@ -9,22 +10,30 @@ export default {
   async execute(interaction) {
     const guildId = interaction.guild.id;
     const userId = interaction.user.id;
-
-    const db = await readGuildDB();
-    const guild = db[guildId];
-    if (!guild || !guild.users || !guild.users[userId]) {
+  
+    const guildDB = await readGuildDB();
+    const guild = guildDB[guildId];
+  
+    if (!guild) {
+      return interaction.reply({
+        content: "❌ サーバー設定が存在しません。",
+        ephemeral: true
+      });
+    }
+  
+    const user = readUserDB(userId);
+  
+    if (!user) {
       return interaction.reply({
         content: "❌ ユーザーデータが存在しません。",
         ephemeral: true
       });
     }
-
-    const user = guild.users[userId];
-
+  
     const balance = user.balance ?? 0;
     const bank = user.bank ?? 0;
     const total = balance + bank;
-
+  
     /* ======================
        ランキング計算
     ====================== */
